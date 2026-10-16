@@ -1,28 +1,75 @@
 import assert from 'node:assert/strict';
-import {recommend,optimise,solar,scenarioMetrics,type Candidate} from './planning.ts';
-import {zones} from '../data/zones.ts';
-const candidate=(id:string,cost:number,score:number,group?:string):Candidate=>({id,cost,score,group,zone:'Z001',name:id,reason:'test',inputs:'test',verification:'test',benefit:'test',eligible:true,green:0,generation:0});
-// Greedy score and score/cost both lose to the exact combination here.
-const fixture=[candidate('a',6,11),candidate('b',5,9),candidate('c',5,9)];
-assert.deepEqual(optimise(fixture,10).selected.map(x=>x.id),['b','c']);
-assert.equal(optimise(fixture,0).selected.length,0);
-assert.deepEqual(optimise(fixture,10,['b']).selected.map(x=>x.id),['a']);
-const conflict=[candidate('roof-solar',5,10,'roof'),candidate('roof-cool',5,9,'roof'),candidate('trees',5,8)];
-assert.equal(optimise(conflict,15).score,18);
-assert.equal(optimise([{...fixture[0],eligible:false}],100).selected.length,0);
-assert.equal(optimise([candidate('expensive',10,10),candidate('cheap',5,10)],10).cost,5);
-assert.throws(()=>optimise(fixture,-1));
-const recommendations=recommend(36.5);
-for(const budget of [0,50000,100000,250000]){const p=optimise(recommendations,budget);assert.ok(p.cost<=budget);assert.equal(p.remaining,budget-p.cost);const groups=p.selected.map(c=>c.group).filter(Boolean);assert.equal(groups.length,new Set(groups).size);}
-assert.ok(optimise(recommendations,100000).score>=optimise(recommendations,50000).score);
-assert.ok(recommendations.some(c=>c.zone==='Z001'&&c.name==='Shade trees'));
-assert.ok(!recommend(45).some(c=>c.name==='Shade trees'));
-assert.ok(recommend(45).some(c=>c.name==='Rooftop solar'));
-assert.deepEqual(solar({area:200,density:.16,yield:1300,factor:.85,cost:3200}),{capacity:32,generation:35360,cost:102400});
-assert.throws(()=>solar({area:-1,density:.16,yield:1300,factor:.85,cost:3200}));
-assert.throws(()=>solar({area:200,density:.16,yield:1300,factor:1.1,cost:3200}));
-assert.equal(zones.length,8);assert.equal(new Set(zones.map(z=>z.zone_id)).size,8);
-const baseline={name:'A',area:100,land:[50,20,10,15,5],roof:1000,budget:1000000,options:[false,false,false,false,false,false]};
-assert.equal(scenarioMetrics(baseline).green,10);
-assert.equal(scenarioMetrics({...baseline,options:[false,true,false,false,false,false]}).generation,176800);
-console.log('Passed: exact optimisation, budget bounds, exclusions, eligibility, exclusivity, tie-breaking, threshold rules, solar units and scenario calculations.');
+import { buildPlanningSummary } from './summary.ts';
+import { recommend, optimise, solar, screenSolar, scenarioMetrics, optimiseScenario, validateScenario, planningScore, normaliseObjectives, priority, hasEnvironment, DEFAULT_OBJECTIVES, type Candidate, type Scenario } from './planning.ts';
+import { zones, demoGeoJSON, demoDataset } from '../data/zones.ts';
+import { loadGeoJSON, parseGeoJSON, type Zone } from '../data/loader.ts';
+import { validNDVI, vegetationDeficit, weightedMean } from '../data/validation.ts';
+let passed = 0;
+function test(name: string, run: () => void) { run(); passed++; console.log(`PASS ${name}`); }
+const candidate = (id: string, cost: number, score: number, group?: string): Candidate => ({ id, cost, score, group, zone: 'Z001', name: id, reason: 'test', inputs: 'test', verification: 'test', benefit: 'test', eligible: true, green: 0, generation: 0, capacity: 0, components: { cooling: score, energy: 0, biodiversity: 0 }, scoring: 'fixture', evidence: 'test' });
+const fixture = [candidate('a', 6, 11), candidate('b', 5, 9), candidate('c', 5, 9)];
+const cooling = { cooling: 10, energy: 0, biodiversity: 0 }, energy = { cooling: 0, energy: 10, biodiversity: 0 }, bio = { cooling: 0, energy: 0, biodiversity: 10 };
+const scenario: Scenario = { name: 'Test site', area: 100, land: [40, 15, 25, 15, 5], roof: 2000, budget: 200000, carportArea: 200, options: [true, true, true, true, true, true] };
+test('exact optimum defeats greedy score and ratio', () => assert.deepEqual(optimise(fixture, 10).selected.map(c => c.id), ['b', 'c']));
+test('empty, zero budget and exclusions', () => { assert.equal(optimise([], 100).cost, 0); assert.equal(optimise(fixture, 0).selected.length, 0); assert.deepEqual(optimise(fixture, 10, ['b']).selected.map(c => c.id), ['a']); });
+test('eligibility, mutually exclusive groups, tie-break', () => { assert.equal(optimise([{ ...fixture[0], eligible: false }], 100).selected.length, 0); assert.equal(optimise([candidate('pv', 5, 10, 'roof'), candidate('cool', 5, 9, 'roof'), candidate('trees', 5, 8)], 15).score, 18); assert.equal(optimise([candidate('expensive', 10, 10), candidate('cheap', 5, 10)], 10).cost, 5); });
+test('invalid solver inputs cannot inflate the plan', () => { for (const b of [-1, NaN, Infinity])
+    assert.throws(() => optimise(fixture, b)); assert.throws(() => optimise([fixture[0], fixture[0]], 100)); assert.equal(optimise([candidate('bad', -5, 90), candidate('nan', 1, NaN), candidate('inf', Infinity, 10)], 10).cost, 0); assert.throws(() => optimise(Array.from({ length: 23 }, (_, i) => candidate(String(i), 1, 1)), 23)); });
+test('fractional costs never exceed budget', () => { const p = optimise([candidate('a', .1, 10), candidate('b', .2, 10)], .3); assert.equal(p.cost, .3); assert.equal(p.remaining, 0); assert.equal(optimise([candidate('a', .301, 10)], .3).selected.length, 0); });
+test('exact solver agrees with independent bitmask oracle', () => {
+    const cs = Array.from({ length: 8 }, (_, i) => candidate(String(i), i % 3 + 2, (i * 7) % 13 + 1, i === 1 || i === 5 ? 'roof' : undefined));
+    for (const budget of [3, 8, 13, 21]) {
+        let bestScore = 0, bestCost = 0;
+        for (let mask = 0; mask < 1 << cs.length; mask++) {
+            const chosen = cs.filter((_, i) => mask & (1 << i));
+            const groups = chosen.flatMap(c => c.group ? [c.group] : []);
+            if (groups.length !== new Set(groups).size)
+                continue;
+            const cost = chosen.reduce((n, c) => n + c.cost, 0), score = chosen.reduce((n, c) => n + c.score, 0);
+            if (cost <= budget && (score > bestScore || (score === bestScore && cost < bestCost))) {
+                bestScore = score;
+                bestCost = cost;
+            }
+        }
+        assert.equal(optimise(cs, budget).score, bestScore);
+        assert.equal(optimise(cs, budget).cost, bestCost);
+    }
+});
+test('objective weights normalise and scores remain 0–100', () => { assert.deepEqual(normaliseObjectives({ cooling: 0, energy: 0, biodiversity: 0 }), { cooling: 0, energy: 0, biodiversity: 0 }); assert.equal(planningScore({ cooling: 100, energy: 0, biodiversity: 0 }, cooling), 100); assert.equal(planningScore({ cooling: 100, energy: 0, biodiversity: 0 }, energy), 0); assert.equal(planningScore({ cooling: NaN, energy: Infinity, biodiversity: -10 }), 0); assert.equal(planningScore({ cooling: 100, energy: 100, biodiversity: 100 }, { cooling: Number.MAX_VALUE, energy: Number.MAX_VALUE, biodiversity: 0 }), 100); });
+test('different intervention scores in same zone', () => { const cs = recommend(36.5); const roof = cs.filter(c => c.zone === 'Z004'); assert.equal(roof.length, 2); assert.notEqual(roof[0].score, roof[1].score); assert.ok(cs.every(c => Number.isFinite(c.score) && c.score >= 0 && c.score <= 100)); });
+test('existing optimiser changes with objectives', () => { const c = optimise(recommend(36.5, cooling), 200000), e = optimise(recommend(36.5, energy), 200000), b = optimise(recommend(36.5, bio), 200000); assert.ok(c.selected.every(x => x.components.cooling > 0)); assert.ok(e.selected.some(x => x.generation > 0)); assert.ok(b.selected.some(x => x.name === 'Biodiversity conservation')); assert.notDeepEqual(c.selected.map(x => x.id), e.selected.map(x => x.id)); assert.equal(optimise(recommend(36.5, { cooling: 0, energy: 0, biodiversity: 0 }), 1e6).selected.length, 0); });
+test('threshold, selection and budget workflows remain', () => { assert.ok(recommend(36.5).some(c => c.zone === 'Z001' && c.name === 'Shade trees')); assert.ok(!recommend(45).some(c => c.name === 'Shade trees')); assert.ok(recommend(45).some(c => c.name === 'Rooftop solar')); for (const budget of [0, 50000, 100000, 250000]) {
+    const p = optimise(recommend(36.5), budget);
+    assert.ok(p.cost <= budget);
+    const groups = p.selected.flatMap(c => c.group ? [c.group] : []);
+    assert.equal(groups.length, new Set(groups).size);
+} assert.ok(optimise(recommend(36.5), 100000).score >= optimise(recommend(36.5), 50000).score); });
+test('solar dimensions and invalid numbers', () => { assert.deepEqual(solar({ area: 200, density: .16, yield: 1300, factor: .85, cost: 3200 }), { capacity: 32, generation: 35360, cost: 102400 }); for (const v of [-1, NaN, Infinity])
+    assert.throws(() => solar({ area: v, density: .16, yield: 1300, factor: .85, cost: 3200 })); assert.throws(() => solar({ area: 200, density: .16, yield: 1300, factor: 1.1, cost: 3200 })); });
+test('solar independent of heat and requires resource + suitability', () => { const roof = zones[1]; const hot = screenSolar({ ...roof, lst_c: 80 }), missing = screenSolar({ ...roof, lst_c: null, ndvi: null }); assert.deepEqual(hot, missing); assert.ok(missing); assert.equal(screenSolar({ ...roof, solar_inputs: { ...roof.solar_inputs, suitable: false } }), null); assert.equal(screenSolar({ ...roof, solar_inputs: { ...roof.solar_inputs, suitable: null } }), null); assert.equal(screenSolar({ ...roof, solar_inputs: { ...roof.solar_inputs, yield: null } }), null); assert.equal(screenSolar({ ...roof, solar_inputs: { ...roof.solar_inputs, status: 'unknown' } }), null); assert.equal(screenSolar({ ...roof, estimated_usable_area: 149 }), null); assert.equal(screenSolar({ ...roof, site_type: 'Park' }), null); const p = screenSolar(zones[4])!; assert.equal(p.cost, solar(p.inputs).cost * 1.35); });
+test('NDVI physical range and priority handling', () => { assert.equal(validNDVI(-1), -1); assert.equal(vegetationDeficit(-1), 1); assert.equal(vegetationDeficit(1), 0); for (const n of [NaN, Infinity, 1.1, -1.1]) {
+    assert.equal(validNDVI(n), null);
+    assert.equal(priority({ ...zones[0], ndvi: n }), 0);
+} assert.equal(hasEnvironment({ ...zones[0], lst_c: null }), false); assert.equal(priority({ ...zones[0], ndvi: -1 }), 90); assert.equal(recommend(36.5, DEFAULT_OBJECTIVES, [{ ...zones[0], ndvi: null }]).length, 0); assert.ok(recommend(36.5, energy, [{ ...zones[1], lst_c: null, ndvi: null }]).some(c => c.name === 'Rooftop solar')); });
+test('missing values excluded from weighted means', () => { assert.equal(weightedMean([{ value: null, weight: 10 }, { value: .5, weight: 2 }]), .5); assert.equal(weightedMean([{ value: NaN, weight: 1 }]), null); assert.equal(weightedMean([]), null); });
+test('central demo loaded through adapter', () => { assert.equal(zones.length, 8); assert.equal(demoDataset.issues.length, 0); assert.ok(zones.every(z => z.data_status === 'synthetic' && z.observation_date === null)); });
+test('GeoJSON missing data preserved, no fabricated observations', () => { const raw = structuredClone(demoGeoJSON) as any; raw.features[0].properties.ndvi = 2; raw.features[0].properties.lst_c = null; raw.features[0].properties.data_status = 'observed'; raw.features[0].properties.observation_date = '2026-02-30'; const loaded = loadGeoJSON(raw); assert.equal(loaded.zones[0].ndvi, null); assert.equal(loaded.zones[0].lst_c, null); assert.equal(loaded.zones[0].data_status, 'unknown'); assert.ok(loaded.issues.length > 0); raw.features[0].properties.observation_date = '2026-02-28'; raw.features[0].properties.data_source = 'Fixture observation source'; assert.equal(loadGeoJSON(raw).zones[0].data_status, 'observed'); });
+test('GeoJSON validity, duplicates and MultiPolygon', () => { assert.equal(parseGeoJSON('{bad').zones.length, 0); assert.equal(loadGeoJSON({}).zones.length, 0); const raw = structuredClone(demoGeoJSON) as any; raw.features.push(structuredClone(raw.features[0])); assert.equal(loadGeoJSON(raw).zones.length, 8); raw.features[0].geometry.coordinates[0][0][0] = 999; assert.equal(loadGeoJSON(raw).zones.length, 8); const f = structuredClone(demoGeoJSON.features[1]) as any; f.geometry = { type: 'MultiPolygon', coordinates: [f.geometry.coordinates] }; assert.equal(loadGeoJSON({ type: 'FeatureCollection', features: [f] }).zones[0].geometry.type, 'MultiPolygon'); });
+test('zero coverage prevents environmental inference', () => { const raw = structuredClone(demoGeoJSON) as any; raw.features[0].properties.data_coverage = 0; const z = loadGeoJSON(raw).zones[0]; assert.equal(z.ndvi, null); assert.equal(z.lst_c, null); assert.equal(recommend(36.5, DEFAULT_OBJECTIVES, [z]).length, 0); });
+test('future optimisation feasible and original remains unchanged', () => { const original = JSON.stringify(scenario); const r = optimiseScenario(scenario); assert.ok(r.valid); assert.ok(r.plan.cost <= scenario.budget); assert.ok(r.plan.selected.length > 0); assert.equal(JSON.stringify(scenario), original); assert.deepEqual(r.scenario.land, scenario.land); assert.ok(!(r.scenario.options[1] && r.scenario.options[3])); assert.equal(r.metrics.cost, r.plan.cost); });
+test('future objectives, zero budget, disabled options and invalid allocations', () => { const c = optimiseScenario(scenario, cooling), e = optimiseScenario(scenario, energy); assert.ok(c.valid && e.valid); assert.notDeepEqual(c.scenario.options, e.scenario.options); assert.equal(optimiseScenario({ ...scenario, budget: 0 }).plan?.cost, 0); assert.equal(optimiseScenario({ ...scenario, options: [false, false, false, false, false, false] }).plan?.selected.length, 0); assert.equal(optimiseScenario({ ...scenario, land: [1, 2, 3, 4, 5] }).valid, false); assert.ok(validateScenario({ ...scenario, roof: Infinity }).length); assert.equal(scenarioMetrics({ ...scenario, area: NaN }).valid, false); });
+test('future solar capacity and cost use parking area', () => { const s = { ...scenario, options: [false, false, true, false, false, false] }; const m = scenarioMetrics(s); assert.equal(m.capacity, 32); assert.equal(m.generation, 35360); assert.equal(m.cost, 138240); });
+test('export-ready data contain finite scores and nullable missing observations', () => { const payload = { zones, objectives: DEFAULT_OBJECTIVES, plan: optimise(recommend(36.5), 100000), future: optimiseScenario(scenario) }; const copy = JSON.parse(JSON.stringify(payload)); assert.equal(copy.zones[0].observation_date, null); assert.ok(copy.plan.cost <= 100000); assert.ok(copy.future.plan.cost <= scenario.budget); });
+test('actual JSON export includes objectives, original and optimised scenarios', () => {
+    const input = { budget: 100000, excluded: [], threshold: 36.5, objectives: energy, scenarios: [scenario, { ...scenario, land: [0, 0, 0, 0, 0] }], solarInputs: { area: 200, density: .16, yield: 1300, factor: .85, cost: 3200 } };
+    const result = JSON.parse(JSON.stringify(buildPlanningSummary(input, '2026-10-16T00:00:00Z')));
+    assert.equal(result.schema_version, 2);
+    assert.equal(result.objectives.normalised.energy, 1);
+    assert.ok(result.existing_township.cost <= 100000);
+    assert.ok(result.future_scenarios[0].budget_constrained.plan.cost <= scenario.budget);
+    assert.equal(result.future_scenarios[1].metrics, null);
+    assert.equal(result.future_scenarios[1].budget_constrained.plan, null);
+    assert.equal(result.solar_calculator.generation, 35360);
+    assert.ok(result.existing_township.candidates.every((c: Candidate) => c.evidence && c.scoring));
+});
+console.log(`${passed} test groups passed.`);
