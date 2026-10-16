@@ -1,0 +1,16 @@
+Validation completed
+- TypeScript check and production build passed.
+- Algorithm checks passed: exact optimisation versus a greedy counterexample, budget bounds, exclusions, eligibility, mutually exclusive roofs, tie-breaking, threshold rules, solar formulas and scenario calculations.
+- Browser checked: navigation, map layer switching and zone selection, RM50,000 to RM100,000 budget changes, land allocation validation, scenario editing and impact-state updates.
+- Mobile navigation and responsive overview checked at 390px; desktop layout checked at 1440px.
+- No browser console errors were reported during the inspected workflow.
+
+Verification limits
+- The export control was invoked, but the browser automation download event timed out; the downloaded file was not inspected.
+- The standalone HTML embeds all compiled JavaScript and CSS. Direct file-protocol validation was blocked by the browser tool URL policy. The same compiled app was tested over the local HTTP preview.
+- Private publication is pending explicit approval. Automatic approval review rejected renewal of the external source-repository write credential.
+
+Use
+- Open CoolTown-Planner.html in a modern browser for the packaged standalone version.
+- For development, extract CoolTown-Planner.zip and follow README.md.
+- All environmental data are synthetic. All planning costs and solar inputs are illustrative assumptions.
