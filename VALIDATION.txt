@@ -37,3 +37,13 @@ browser displayed 12 loaded MapTiler imagery tiles with aligned artificial heat 
 and visible attribution. TypeScript and production build passed again. No planning
 algorithms changed; the prior 53-group regression result still applies. Actual user
 GeoJSON, imagery capture date and production-domain key restrictions remain unverified.
+
+Map usability update: 59 algorithm test groups pass (six added). New coverage:
+invalid/insufficient extremes excluded from colour range; legend/map agreement;
+empty/constant/negative/narrow ranges; active dataset/coverage threshold changes;
+ID/name search including insufficient zones; first-valid selection and fallback.
+Production browser: artificial 20-zone fixture, 11 quality-valid colours plus gray;
+legend min36.2/max38.0 C matched raw36.18/37.98 endpoints; first valid zone02 selected;
+search for zone13 returned the insufficient zone; selection changed map coordinates,
+collapsed navigator and kept assessment disabled. Fit study area restored context.
+MapTiler satellite tiles loaded successfully. No real dataset measurements fabricated.

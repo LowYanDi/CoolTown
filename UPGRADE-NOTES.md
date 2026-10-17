@@ -100,3 +100,7 @@ New files: src/data/siteAssessment.ts and src/components/SiteAssessmentForm.tsx.
 ## Dynamic provenance / GIS
 
 Fixed historical context state, checkbox and export were removed. Date ranges and per-zone metadata now drive the panel and export. Records with valid geometry but incomplete provenance remain visible, gray and excluded from reliable environmental analysis. Map layer colours use actual recommendations/opportunities rather than a priority shortcut. No new npm dependencies. Add .env.local with a public domain-restricted VITE_MAPTILER_KEY for satellite imagery. Street/offline fallback works without a key. See README and INSTALL-CHANGES.md.
+
+## Map usability patch
+
+New temperatureScale.ts, TemperatureLegend.tsx and ZoneNavigator.tsx. GeoJSONMap/TownMap use a shared quality-valid relative Celsius colour scale. The real-map long zone button list is replaced by collapsed searchable bounded navigation. Zoom on explicit selection, full-study reset, and first-valid import selection are preserved. No planning data or algorithms changed. No new dependencies.

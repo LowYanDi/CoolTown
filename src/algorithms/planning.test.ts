@@ -1,3 +1,4 @@
+import {temperatureScale,temperatureColor,filterZones,INSUFFICIENT_COLOR} from '../data/temperatureScale.ts';
 import {datasetProvenance,observationPeriod,firstQualityZone} from '../data/provenance.ts';
 import {geographicBounds,polygonStyle,candidateStage,resolveBasemap} from '../data/mapModel.ts';
 import { emptyAssessment, screenAssessment, type SiteAssessment } from '../data/siteAssessment.ts';
@@ -318,7 +319,33 @@ test('export includes dynamic provenance scores and selection without fixed-year
  const d=importStudyArea(JSON.stringify(importedFixture()),'export-fixture');const result=buildPlanningSummary({dataset:d,selectedZoneIds:[d.zones[0].zone_id,'MISSING'],budget:5000,threshold:36.5,excluded:[],objectives:DEFAULT_OBJECTIVES,scenarios:[scenario],solarInputs:{area:200,density:.16,yield:1300,factor:.85,cost:3200}});
  assert.equal(result.dataset_provenance.filename,d.title);assert.equal(result.dataset_provenance.period,'2026-01-01');assert.deepEqual(result.selected_zone_ids,[d.zones[0].zone_id]);assert.equal(result.environmental_scores.length,2);assert.ok(!('historical_study_context'in result));assert.ok(result.dataset_provenance.limitations.length>0);
 });
+
+test('relative temperature scale excludes invalid and insufficient extremes',()=>{
+ const records=[{...zones[0],lst_c:36.2},{...zones[1],lst_c:36.8},{...zones[2],lst_c:90,data_coverage:79},{...zones[3],lst_c:null}];const before=JSON.stringify(records);const scale=temperatureScale(records)!;
+ assert.equal(scale.min,36.2);assert.equal(scale.max,36.8);assert.equal(scale.count,2);assert.notEqual(temperatureColor(36.2,scale),temperatureColor(36.8,scale));assert.equal(JSON.stringify(records),before);
+ assert.equal(polygonStyle(records[2],'','Surface temperature',36.5,80,.5,'',true,scale).fillColor,INSUFFICIENT_COLOR);
+});
+test('legend colours exactly match map scale endpoints and midpoint',()=>{
+ const records=[{...zones[0],lst_c:34},{...zones[1],lst_c:36},{...zones[2],lst_c:38}],scale=temperatureScale(records)!;
+ for(const stop of scale.stops){const z={...zones[0],lst_c:stop.value};assert.equal(polygonStyle(z,'','Surface temperature',36.5,80,.5,'',true,scale).fillColor,stop.color);}
+});
+test('temperature scale handles empty constant negative and narrow ranges',()=>{
+ assert.equal(temperatureScale([]),null);assert.equal(temperatureScale([{...zones[0],data_coverage:0}]),null);assert.equal(temperatureColor(null,null),INSUFFICIENT_COLOR);
+ const constant=temperatureScale([{...zones[0],lst_c:37},{...zones[1],lst_c:37}])!;assert.equal(constant.stops.length,1);assert.equal(temperatureColor(37,constant),constant.stops[0].color);
+ for(const [min,max]of [[-4,-2],[37.100001,37.100002]]){const scale=temperatureScale([{...zones[0],lst_c:min},{...zones[1],lst_c:max}])!;assert.notEqual(temperatureColor(min,scale),temperatureColor(max,scale));assert.ok(scale.stops.every(s=>/^#[0-9a-f]{6}$/.test(s.color)));}
+});
+test('relative scale follows active dataset and configured quality threshold',()=>{
+ const a={...zones[0],lst_c:32,data_coverage:85},b={...zones[1],lst_c:39,data_coverage:95};assert.equal(temperatureScale([a,b],90)!.min,39);assert.equal(temperatureScale([a],90),null);assert.equal(temperatureScale([a,b],80)!.min,32);assert.equal(temperatureScale([b],80)!.min,39);
+});
+test('navigator searches IDs and names without removing insufficient zones',()=>{
+ const a={...zones[0],zone_id:'MY-001',zone_name:'North Site'},b={...zones[1],zone_id:'MY-002',zone_name:'South Site',data_coverage:20};const records=[a,b];
+ assert.deepEqual(filterZones(records,' my-002 '),[b]);assert.deepEqual(filterZones(records,'NORTH'),[a]);assert.deepEqual(filterZones(records,''),records);assert.equal(filterZones(records,'missing').length,0);assert.equal(b.data_coverage,20);
+});
+test('initial quality selection retains insufficient fallback and does not change records',()=>{
+ const records=[{...zones[0],data_coverage:79},{...zones[1],data_coverage:80}];const before=JSON.stringify(records);assert.equal(firstQualityZone(records,80),records[1].zone_id);assert.equal(firstQualityZone(records,90),records[0].zone_id);assert.equal(firstQualityZone([]),'');assert.equal(JSON.stringify(records),before);
+});
 console.log(`${passed} test groups passed.`);
+
 
 
 

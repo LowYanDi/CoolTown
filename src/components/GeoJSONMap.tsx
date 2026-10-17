@@ -1,5 +1,8 @@
+import { ZoneNavigator } from './ZoneNavigator';
+import { TemperatureLegend } from './TemperatureLegend';
+import { temperatureScale } from '../data/temperatureScale';
 import { temperatureText, ndviText, coverageText } from '../data/presentation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Zone } from '../data/loader';
@@ -14,6 +17,10 @@ export function GeoJSONMap({records,selected,onSelect,minimumCoverage=DEFAULT_MI
  const container=useRef<HTMLDivElement>(null),mapRef=useRef<L.Map|null>(null),polygons=useRef<L.GeoJSON|null>(null),callback=useRef(onSelect);
  callback.current=onSelect;
  const [basemap,setBasemap]=useState<Basemap>('street'),[opacity,setOpacity]=useState(.5),[overlay,setOverlay]=useState(true),[error,setError]=useState(''),[tileError,setTileError]=useState('');
+ const scale=useMemo(()=>temperatureScale(records,minimumCoverage),[records,minimumCoverage]);
+ const previousSelection=useRef({records,selected});
+ const zoomZone=(id:string)=>{const z=records.find(z=>z.zone_id===id);const bounds=z?geographicBounds([z]):null;if(bounds)mapRef.current?.fitBounds(bounds,{padding:[35,35],maxZoom:18,animate:false});};
+ useEffect(()=>{const prev=previousSelection.current;previousSelection.current={records,selected};if(prev.records===records&&prev.selected!==selected)zoomZone(selected);},[records,selected]);
  const key=String(import.meta.env.VITE_MAPTILER_KEY??'').trim();
  const mode=resolveBasemap(basemap,key);
  useEffect(()=>{
@@ -36,7 +43,7 @@ export function GeoJSONMap({records,selected,onSelect,minimumCoverage=DEFAULT_MI
  useEffect(()=>{
   const map=mapRef.current;if(!map||!records.length)return;
   let active=true,tiles:L.TileLayer|undefined;const controller=new AbortController();
-  setTileError(basemap==='satellite'&&!key?'Satellite imagery needs VITE_MAPTILER_KEY, a public browser key. Street fallback is shown.':'');
+  setTileError(basemap==='satellite'&&!key?'Satellite imagery needs a public VITE_MAPTILER_KEY. Set it in .env.local beside package.json (or in your hosting build environment), then restart/rebuild. Restrict it to your website domains. Street fallback is shown.':'');
   const street=()=>{
    tiles?.remove();tiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:OSM_ATTR,referrerPolicy:'strict-origin-when-cross-origin'});
    tiles.on('tileerror',()=>{if(active)setTileError('Street tiles could not load. Imported polygons remain available. Check connectivity or choose No basemap.');});tiles.addTo(map);
@@ -62,13 +69,13 @@ export function GeoJSONMap({records,selected,onSelect,minimumCoverage=DEFAULT_MI
   return ()=>{active=false;controller.abort();tiles?.remove();};
  },[mode,basemap,key,records]);
  useEffect(()=>{
-  polygons.current?.setStyle(feature=>{const z=feature!.properties as Zone;return polygonStyle(z,selected,layer,threshold,minimumCoverage,opacity,candidateStage(z,candidates,opportunities),overlay);});
+  polygons.current?.setStyle(feature=>{const z=feature!.properties as Zone;return polygonStyle(z,selected,layer,threshold,minimumCoverage,opacity,candidateStage(z,candidates,opportunities),overlay,scale);});
   polygons.current?.eachLayer(polygon=>{
    const z=(polygon as L.Polygon & {feature:{properties:Zone}}).feature.properties;const quality=environmentalQuality(z,minimumCoverage);
    const popup=document.createElement('div');popup.textContent=[z.zone_id,z.zone_name,'LST: '+temperatureText(z.lst_c)+' °C; NDVI: '+ndviText(z.ndvi),'Land cover: '+z.landcover,landcoverReference(z),'Coverage: '+coverageText(z.data_coverage),'Observation: '+observationPeriod(z),'Source: '+z.data_source,'Classification: '+z.data_status,quality.label,quality.usable?(z.lst_c!>=threshold?'Hotspot':'Below hotspot threshold'):'Not classified as reliable hotspot','Priority: '+(quality.usable?priority(z,minimumCoverage)+'/100':'Unavailable'),'Site: '+(z.site_verified?(z.site_verification_source||'Verification claimed; evidence unavailable'):'Not verified'),candidateStage(z,candidates,opportunities),'Candidates: '+(candidates.filter(c=>c.zone===z.zone_id).map(c=>c.name).join(', ')||'None')].join(' | ');
    if(polygon.getPopup())polygon.setPopupContent(popup);else polygon.bindPopup(popup);
   });
- },[records,selected,layer,threshold,minimumCoverage,opacity,overlay,candidates,opportunities]);
+ },[records,selected,layer,threshold,minimumCoverage,opacity,overlay,candidates,opportunities,scale]);
  return <div>
   {!records.length?<div className="notice">Observed data has not yet been imported. Choose a local GeoJSON file.</div>:<>
    <div className="form-grid"><label className="field"><span>Basemap</span><select aria-label="Basemap" value={basemap} onChange={e=>setBasemap(e.target.value as Basemap)}><option value="street">Street map</option><option value="satellite">Satellite imagery</option><option value="none">No basemap (offline)</option></select></label><label className="field"><span>Overlay opacity · {Math.round(opacity*100)}%</span><input aria-label="Overlay opacity" type="range" min="0" max="100" value={opacity*100} onChange={e=>setOpacity(+e.target.value/100)}/></label></div>
@@ -79,7 +86,7 @@ export function GeoJSONMap({records,selected,onSelect,minimumCoverage=DEFAULT_MI
   {tileError&&<p role="status" className="notice">{tileError}</p>}{error&&<p role="alert" className="error">{error}</p>}
   <div ref={container} aria-label="Real GIS study area map" style={{height:480,position:'relative',zIndex:0,display:records.length?'block':'none'}}/>
   {layer==='Intervention zones'&&<p className="source-note">Blue: environmental opportunity · Amber: preliminary assumed candidate · Green: independent verification declared (not authenticated) · Pale: no candidate or verification evidence unavailable. Gray: Insufficient Data.</p>}
-  <div className="zone-candidates">{records.map(z=><button type="button" key={z.zone_id} aria-pressed={z.zone_id===selected} onClick={()=>onSelect(z.zone_id)}>{z.zone_name} · {environmentalQuality(z,minimumCoverage).label}</button>)}</div>
+  {records.length>0&&<><button type="button" className="text-link" onClick={()=>{const bounds=geographicBounds(records);if(bounds)mapRef.current?.fitBounds(bounds,{padding:[20,20],maxZoom:17,animate:false});}}>Fit study area</button>{layer==='Surface temperature'&&<TemperatureLegend records={records} minimum={minimumCoverage}/>}<ZoneNavigator records={records} selected={selected} minimum={minimumCoverage} onSelect={id=>{onSelect(id);zoomZone(id);}}/></>}
  </div>;
 }
 

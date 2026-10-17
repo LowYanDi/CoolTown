@@ -57,7 +57,7 @@ Properties include zone_id, zone_name, lst_c, ndvi, landcover, observation_date 
 
 ## Validation and export
 
-53 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
+59 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
 
 ## Environmental charts and two-stage planning update
 
@@ -91,3 +91,11 @@ Export schema 3 contains dataset_provenance, selected_zone_ids and nullable envi
 
 Provider references: https://docs.maptiler.com/cloud/api/tiles/ ; https://docs.maptiler.com/guides/credentials/api-key/ ; https://www.maptiler.com/copyright/ ; https://operations.osmfoundation.org/policies/tiles/ . Do not bulk download/prefetch OSM tiles, disable caching/referrers, or assume an SLA. Use a suitable hosted plan for traffic beyond a small interactive prototype.
 
+
+## Relative temperature colours and Zone Navigator
+
+Temperature colours linearly interpolate blue → warm yellow → red across the active dataset’s quality-valid LST minimum/midpoint/maximum. The map and Celsius legend use the same scale. Coverage-invalid, missing or provenance-invalid records cannot set the range and remain gray. Colour is relative within the selected dataset, not a scientific risk category; comparisons between datasets require reading the Celsius values. Raw observations, scores, solar screening and hotspot thresholds are unchanged. Equal-temperature datasets use one colour; empty valid sets show an unavailable legend. Endpoint labels use one decimal with full-precision hover text for narrow ranges. Demo maps use the same scale.
+
+The Zone Navigator is collapsed initially and searches IDs or names case-insensitively. Results are bounded in a scrolling area, include data-quality status and retain insufficient zones. Choosing a result highlights/zooms to its bounds and collapses the list. Fit study area restores all polygons. New imports still fit the full dataset and select the first quality-valid zone; if none passes, the first zone remains visible as insufficient. Layer, opacity and basemap changes never change selection.
+
+MapTiler remains configured by VITE_MAPTILER_KEY. Missing-key instructions now explain .env.local / hosting environment setup and restart/rebuild; street fallback remains available. Do not replace your existing public key or domain restrictions when applying this source patch.

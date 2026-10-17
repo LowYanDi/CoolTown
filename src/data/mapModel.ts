@@ -1,3 +1,4 @@
+import { temperatureColor, type TemperatureScale } from './temperatureScale.ts';
 import type { Zone } from './loader.ts';
 import type { Candidate } from '../algorithms/planning.ts';
 import type { Opportunity } from '../algorithms/opportunities.ts';
@@ -11,7 +12,7 @@ export function candidateStage(z:Zone,candidates:Pick<Candidate,'zone'|'prelimin
  if(cs.length)return 'Screened candidate · verification evidence unavailable';
  return opportunities.some(o=>o.zone===z.zone_id)?'Environmental opportunity · investigation required':'No screened candidates';
 }
-export function polygonStyle(z:Zone,selected:string,layer:string,threshold:number,minimum:number,opacity:number,stage:string,visible=true){
+export function polygonStyle(z:Zone,selected:string,layer:string,threshold:number,minimum:number,opacity:number,stage:string,visible=true,scale:TemperatureScale|null=null){
  const good=environmentalQuality(z,minimum).usable;
  let fill='#c9cecb';
  if(good){
@@ -19,7 +20,7 @@ export function polygonStyle(z:Zone,selected:string,layer:string,threshold:numbe
   else if(layer==='Vegetation / NDVI')fill=`hsl(151 28% ${83-clamp01(z.ndvi!)*45}%)`;
   else if(layer==='Heat hotspots')fill=z.lst_c!>=threshold?'#de956e':'#cad8ca';
   else if(layer==='Intervention zones')fill=stage.startsWith('Independent')?'#22734d':stage.startsWith('Preliminary')?'#d7a24c':stage.startsWith('Environmental')?'#91b7d2':'#d8dfd1';
-  else fill=z.lst_c!>=38?'#dd8e6d':z.lst_c!>=36?'#e4b77c':z.lst_c!>=34?'#c8cb99':'#79b797';
+  else fill=temperatureColor(z.lst_c,scale);
  }
  return {color:z.zone_id===selected?'#102f28':!good?'#68706b':'#ffffff',weight:z.zone_id===selected?4:2,dashArray:good?undefined:'5 4',fillColor:fill,fillOpacity:visible?clamp01(opacity):0};
 }
