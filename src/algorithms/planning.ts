@@ -187,3 +187,9 @@ export function optimiseScenario(s: Scenario, w: Objectives = DEFAULT_OBJECTIVES
     const plan = optimise(candidates, s.budget), scenario = { ...s, land: [...s.land], options: optionNames.map((_, i) => plan.selected.some(c => c.id === `future-${i}`)) };
     return { valid: true as const, errors, candidates, scenario, metrics: scenarioMetrics(scenario, w), plan };
 }
+
+/** UI/export-safe wrapper; an unsupported dataset is blocked, never optimised partially. */
+export function planningResult(candidates: Candidate[], budget: number, excluded: string[] = []) {
+    try { return { ...optimise(candidates, budget, excluded), error: null as string | null }; }
+    catch (error) { return { selected: [] as Candidate[], cost: 0, score: 0, remaining: finite(budget) ? budget : 0, error: error instanceof Error ? error.message : 'Unable to optimise this dataset.' }; }
+}

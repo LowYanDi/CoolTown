@@ -1,3 +1,5 @@
+import { importStudyArea, selectDataset, DEMO_DATASET, MAX_IMPORT_BYTES } from '../data/dataset.ts';
+import { planningResult } from './planning.ts';
 import { environmentalQuality, coverageThreshold } from '../data/validation.ts';
 import { prepareRealGIS } from '../data/gis.ts';
 import assert from 'node:assert/strict';
@@ -128,5 +130,58 @@ test('optional GIS excludes demo and retains observation provenance and quality'
     raw.features[0].properties.observation_date = null;
     assert.equal(prepareRealGIS(raw).collection.features.length, 0);
 });
+
+// Artificial fixtures only; never shipped as authentic Malaysian observations.
+const importedFixture = () => {
+    const raw = structuredClone(demoGeoJSON) as any;
+    raw.features = raw.features.slice(0, 2);
+    raw.features.forEach((f: any, i: number) => { f.properties = { ...f.properties, zone_id: 'TEST-ONLY-' + i, zone_name: 'ARTIFICIAL TEST FIXTURE ' + i, observation_date: '2026-01-01', data_source: 'ARTIFICIAL UNIT TEST - NOT SATELLITE DATA' }; delete f.properties.data_status; });
+    return raw;
+};
+test('import validates date/source and explicit provenance without inventing observations', () => {
+    const raw = importedFixture();
+    let d = importStudyArea(JSON.stringify(raw), 'test-only.geojson');
+    assert.equal(d.zones.length, 2); assert.equal(d.mode, 'real');
+    assert.equal(d.zones[0].data_status, 'observed');
+    assert.deepEqual(d.zones[0].geometry, raw.features[0].geometry);
+    raw.features[0].properties.observation_date = '2026-02-30';
+    d = importStudyArea(JSON.stringify(raw), 'test-only.geojson'); assert.equal(d.zones.length, 1);
+    raw.features[1].properties.data_status = 'synthetic';
+    assert.throws(() => importStudyArea(JSON.stringify(raw), 'test.geojson'), /No usable observed/);
+});
+test('import rejects malformed, oversized and empty datasets', () => {
+    for (const text of ['{bad', '{}', '{"type":"FeatureCollection","features":[]}']) assert.throws(() => importStudyArea(text, 'test'));
+    assert.throws(() => importStudyArea(' '.repeat(MAX_IMPORT_BYTES + 1), 'huge'), /5 MB/);
+    const raw = importedFixture(); raw.features = Array.from({length:501}, () => raw.features[0]);
+    assert.throws(() => importStudyArea(JSON.stringify(raw), 'many'), /500/);
+});
+test('import flags invalid observations and never borrows demo solar suitability', () => {
+    const raw = importedFixture(); raw.features[0].properties.data_coverage = 79;
+    raw.features[1].properties.ndvi = 4; delete raw.features[1].properties.solar_inputs;
+    const d = importStudyArea(JSON.stringify(raw), 'quality');
+    assert.equal(d.zones.length, 2); assert.ok(d.issues.length);
+    assert.equal(recommend(30, energy, d.zones).length, 0);
+    assert.equal(d.zones[1].ndvi, null); assert.equal(screenSolar(d.zones[1]), null);
+});
+test('selected real dataset and empty real mode never fall back to demo zones', () => {
+    const empty = selectDataset('real', null); assert.equal(empty.zones.length, 0);
+    const d = importStudyArea(JSON.stringify(importedFixture()), 'test.geojson');
+    assert.equal(selectDataset('real', d), d); assert.equal(selectDataset('demo', d), DEMO_DATASET);
+    const input = { budget:100000, threshold:30, excluded:[], objectives:DEFAULT_OBJECTIVES, scenarios:[scenario], solarInputs:{area:200,density:.16,yield:1300,factor:.85,cost:3200} };
+    for (const dataset of [empty, d]) {
+        const result = buildPlanningSummary({...input,dataset});
+        assert.deepEqual(result.zones.map(z=>z.zone_id), dataset.zones.map(z=>z.zone_id));
+        assert.ok(result.existing_township.candidates.every(c=>dataset.zones.some(z=>z.zone_id===c.zone)));
+        assert.equal(result.data_source.mode, 'real');
+        assert.equal(result.environmental_quality.zones.length,dataset.zones.length);
+    }
+    assert.equal(buildPlanningSummary({...input,dataset:empty}).existing_township.candidates.length,0);
+});
+test('large imported candidate sets fail explicitly and exclusions restore exact optimisation', () => {
+    const cs = Array.from({length:23},(_,i)=>candidate(String(i),1,1));
+    const blocked = planningResult(cs,100); assert.match(blocked.error!, /22/); assert.equal(blocked.selected.length,0);
+    const allowed = planningResult(cs,100,['22']); assert.equal(allowed.error,null); assert.equal(allowed.selected.length,22);
+});
 console.log(`${passed} test groups passed.`);
+
 

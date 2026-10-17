@@ -13,7 +13,7 @@ npm run build
 npm run dev
 ```
 
-In Windows PowerShell use `npm.cmd` if npm.ps1 is blocked. Deploy the newly generated `dist/`, not an older build. Do not commit node_modules. The update package includes rebuilt dist and a BUILD-MANIFEST.json recording source and build hashes. No new dependency is needed for the default application.
+In Windows PowerShell use `npm.cmd` if npm.ps1 is blocked. Deploy the newly generated `dist/`, not an older build. Do not commit node_modules. The update package includes rebuilt dist and a BUILD-MANIFEST.json recording source and build hashes. Every npm run build regenerates the manifest through scripts/build-manifest.mjs. Leaflet 1.9.4 and its CSS are bundled locally; package.json and package-lock.json must be updated together.
 
 ## Environmental quality
 
@@ -43,12 +43,18 @@ Whole-roof solar and cool roofs are mutually exclusive in BOTH original and opti
 - src/data/validation.ts: shared environmental quality policy.
 - src/data/gis.ts: prepares the optional real-data layer; excludes synthetic, assumed and unknown records.
 - src/components/TownMap.tsx: active schematic map, unchanged overall design.
-- src/components/GeoJSONMap.tsx: optional Leaflet 1.9-compatible component accepting a host-supplied Leaflet runtime, GeoJSON data, shared minimum coverage, selected ID and selection callback. It is not activated or bundled into the default map. It fetches no tiles or external services and invents no boundaries. It has selection buttons, safe text popups, source/date/coverage labels, resize handling and cleanup.
+- src/data/dataset.ts: selected dataset model and local import validation; no real-mode fallback to demo records.
+- src/components/DatasetControls.tsx: local file input, dataset toggle, import errors and validation report.
+- src/components/GeoJSONMap.tsx: active Leaflet renderer with locally bundled CSS. Uses selected validated records, all five map layers, date/source popups, keyboard-accessible zone buttons and shared quality policy. No external tiles or API is requested.
 
-To activate later, locally install/bundle Leaflet and its CSS in the host, pass its namespace as the component's leaflet prop, pass actual GeoJSON as data, and wire selected/onSelect to the imported dataset state. Keep the current schematic until that integration is ready. The optional renderer was type-checked; it has not been tested with a live Leaflet runtime or real observations. Its API follows https://leafletjs.com/reference.html .
+In Existing Township Analysis choose Synthetic Demo Map or Real GIS Study Area. Real mode starts empty until a local GeoJSON is accepted. Importing selects it for Overview, Analysis, Recommendations, Budget, Impact and JSON export. Future Township remains a separate synthetic scenario model. Switching datasets clears zone selection and per-candidate exclusions. The imported file remains in memory only and is discarded on refresh; it is not uploaded.
+
+Imports accept a WGS84 FeatureCollection of up to 500 zones and 5 MB. Invalid geometries/duplicate IDs are skipped; invalid measurements become null with visible warnings. Missing/invalid date or source excludes a record from the real layer. Absent data_status is treated as the user's observed declaration on import, but explicit synthetic/assumed/unknown records are excluded. This does not certify the observations. A failed import leaves the last accepted dataset unchanged. No actual Malaysian observations or boundaries are distributed.
+
+The exact optimiser still supports at most 22 positive-score eligible candidates. Larger candidate sets show an explicit blocking error and no partial plan; exclusions can reduce the set. JSON export records that error. Missing area_ha contributes no area and is flagged; area-weighted indicators exclude missing/zero areas. No geometry-to-area estimate or site/solar assumptions are invented. Supplying only satellite observations may correctly yield no installable interventions: planting areas, roof exposure and solar suitability need separate evidence.
 
 Properties include zone_id, zone_name, lst_c, ndvi, landcover, observation_date (YYYY-MM-DD), data_source, data_status, data_coverage (percent), area_ha, site_type and site suitability/solar inputs. Coordinates use [longitude,latitude]. See UPGRADE-NOTES.md for the complete contract. Declared observed provenance without date/source becomes unknown. Geometry validation is not topology or survey certification. No real observations are included.
 
 ## Validation and export
 
-28 test groups cover the original 23 behaviours plus quality boundaries/missing data, consistent environmental exclusion, original roof conflicts, quality/conflict export and optional GIS provenance. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
+33 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.

@@ -1,37 +1,26 @@
-CoolTown Planner validation — quality and scenario update
+CoolTown Planner — Real GIS integration validation
 
-Automated checks: 28 test groups in src/algorithms/planning.test.ts.
-Original 23 groups retained: exact optimiser vs independent exhaustive oracle, budgets,
-exclusions, exclusivity, ties, objective weighting, solar calculations and suitability,
-NDVI/missing observations, GeoJSON validation, future optimisation and JSON export.
-Five added groups: coverage boundaries/missing values; all environmental recommendation
-rules using coverage and observations; conflicting original roof totals withheld while
-optimiser resolves conflict; exported quality policy and conflict status; GIS observed
-provenance, coordinates and coverage.
+33 test groups pass, preserving the prior 28 groups. New coverage includes local import
+provenance, malformed/oversized/empty imports, invalid environmental observations,
+missing solar suitability, dataset selection and export isolation, and explicit exact
+optimiser capacity errors. Artificial test fixtures are NOT real satellite observations.
 
-Commands:
-  npm.cmd test
-  node node_modules/typescript/bin/tsc --noEmit
-  npm.cmd run build
+TypeScript: tsc --noEmit. Production: npm.cmd run build (runs TypeScript first).
+Production dist is regenerated and hashed alongside source/config in BUILD-MANIFEST.json.
+Vite's large-chunk warning is non-fatal. Source and package lock are delivered together.
 
-The build starts from current source and regenerates dist. BUILD-MANIFEST.json records
-SHA-256 hashes of source/config files and all generated dist files for this delivery.
-Vite may report a bundle-size warning (>500 kB); this does not prevent a successful build.
+Limits: 5 MB / 500 imported zones; exact optimiser <=22 eligible positive-score candidates.
+No partial budget plan is silently produced when that limit is exceeded.
+Coverage 80% is illustrative, not scientific certification. Imported observed status is
+user-declared and cannot verify authenticity. Geometry validation does not certify
+self-intersections/topology or survey accuracy. Missing areas/site suitability/resource
+assumptions are not fabricated. No real records are bundled; future scenarios stay synthetic.
 
-Limitations:
-- 80% valid coverage is an illustrative configurable rule, not scientific certification.
-- All shipped records are synthetic, including 100% demo coverage.
-- Solar/site input verification is independent of environmental satellite coverage.
-- Conflicting original scenarios have valid:false and metrics:null in JSON; the
-  algorithm's numeric placeholders must not be presented as feasible scenario totals.
-- Optional GeoJSON map is prepared and TypeScript-checked, not connected to real data.
-  Leaflet runtime and CSS are deliberately host-supplied; no external map/API is fetched.
-- No claimed satellite authenticity, topology validation, engineering approval, validated
-  cooling reduction or machine learning. Exact optimiser supports <=22 eligible options.
-Browser smoke checks on the rebuilt production preview:
-- Overview loads all five navigation entries and shows the shared quality policy.
-- Changing coverage from 80% to 95% persists when navigating back to Overview.
-- Selecting both whole-roof options shows explicit infeasibility and withholds totals.
-- Optimisation still produces a conflict-free plan under budget without changing original selections.
-- Browser console error log was empty during these checks.
-- Low/missing coverage behaviour is covered by unit tests; all shipped demo zones have 100% coverage.
+Local run: npm.cmd ci, npm.cmd test, npm.cmd run build, npm.cmd run dev.
+Leaflet and CSS are locally bundled. No backend, database, authentication, ML, Supabase,
+external tile requests or satellite services are introduced.
+
+Browser checks on production preview (artificial QA fixtures only): real mode initially
+empty, local file import, two-zone dataset isolation, low-coverage warning/ranking,
+imported-zone-only recommendations and budget, Leaflet controls and no console errors.
+No actual Malaysian observed dataset was available for scientific/geographic validation.

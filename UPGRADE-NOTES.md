@@ -1,3 +1,7 @@
+# CoolTown Planner — planning logic update
+
+This update preserves the original five pages, visual styling, demo map, zone selection, charts, scenario A/B editing and JSON download. It introduces no package, backend, authentication, API, database or machine learning. State remains browser-session state. CSS, package.json and package-lock.json are unchanged.
+
 ## Objective scoring
 
 The zone environmental screening priority remains separate from intervention planning utility. A score is a transparent preference heuristic, not a measured environmental benefit, impact percentage or scientific rating.
@@ -58,7 +62,7 @@ Enumerates all subsets for the small demo dataset. Filters excluded/ineligible/i
 
 ## Data validation and future GIS
 
-The original eight demo records now pass through `loadGeoJSON()` in `src/data/loader.ts`. The demo still drives the schematic; no real dataset is loaded and no upload UI was added. To integrate future data, call `parseGeoJSON(text)` or `loadGeoJSON(object)` and examine its `{zones, issues}` result before connecting it to application state and a real map renderer.
+The original eight demo records now pass through `loadGeoJSON()` in `src/data/loader.ts`. The demo still drives the schematic; no real dataset is bundled; a local upload UI now validates and selects observed records. To integrate future data, call `parseGeoJSON(text)` or `loadGeoJSON(object)` and examine its `{zones, issues}` result before connecting it to application state and a real map renderer.
 
 The supported contract is a WGS84 FeatureCollection containing Polygon or MultiPolygon Features. Rings must close, have at least four positions, finite longitude/latitude within bounds, and non-zero signed area. Validation does not certify topology (self-intersections/holes), survey accuracy or provenance authenticity. IDs must be non-empty and unique. Invalid geometry/duplicate-ID features are skipped with issues.
 
@@ -77,6 +81,10 @@ npm.cmd run build
 
 On Linux/macOS use `npm` instead of `npm.cmd`. Existing dependencies suffice. The updated test file exercises the solver against an independent exhaustive oracle, budget bounds, objective changes, eligibility/exclusivity, nullable/environmental validation, solar independence, GeoJSON loading, future optimisation and the actual JSON summary builder.
 
-## Optional map preparation
+## Activated real-data integration
 
-`src/data/gis.ts` prepares observed records with valid date/source metadata; it excludes demo/assumed/unknown records. `src/components/GeoJSONMap.tsx` accepts a host-provided Leaflet 1.9 runtime and GeoJSON. Load Leaflet CSS in that future host. No dependency or external tile service is added to the current app. The schematic remains active. Prepared component supports coordinate boundaries, observation dates, source, valid coverage, quality colouring, safe text popups and zone selection. Type-checked only; no live Leaflet or real-data verification is claimed. See README.md for integration details.
+Existing Township Analysis now includes Synthetic Demo Map / Real GIS Study Area and a local GeoJSON file input. Leaflet 1.9.4 and CSS are imported locally. Both map modes use the same active dataset as statistics, quality rules, recommendations, exact optimisation and export. Empty real mode has zero records; no synthetic fallback occurs. All five map layers and interactive selection work with imported polygons. Observation dates and source declarations are shown in popups, the selected-zone panel and exported records.
+
+The importer accepts up to 500 zones / 5 MB and uses loadGeoJSON. Without explicit data_status, import mode asserts observed provenance only with valid date/source metadata; explicit synthetic/unknown/assumed records are excluded. Invalid measurements are flagged and remain null; invalid geometry/duplicate IDs are skipped. Missing site and solar inputs are not filled from demo assumptions. The 80% configurable shared quality requirement is preserved. The UI warns when more than 22 eligible candidates prevent exact optimisation; no silent truncation occurs.
+
+The independent Future Township scenarios stay synthetic. Costs remain assumed; environmental scores remain derived heuristics. Imported declarations are not independent satellite verification. No real boundaries, satellite observations or external basemap service are included. See README.md and VALIDATION.txt.
