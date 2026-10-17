@@ -1,4 +1,6 @@
-import { STUDY_CONTEXT, type SiteAssessments } from '../data/siteAssessment.ts';
+import { type SiteAssessments } from '../data/siteAssessment.ts';
+import { datasetProvenance } from '../data/provenance.ts';
+import { priority } from './planning.ts';
 import { preliminaryOpportunities } from './opportunities.ts';
 import { warningGroups } from '../data/presentation.ts';
 import { DEMO_DATASET, type PlanningDataset } from '../data/dataset.ts';
@@ -6,7 +8,7 @@ import { COVERAGE_POLICY, coverageThreshold, environmentalQuality } from '../dat
 import { zones, source, demoDataset } from '../data/zones.ts';
 import { recommend, planningResult, optimiseScenario, scenarioMetrics, normaliseObjectives, solar, SCORE_METHOD, SCENARIO_ASSUMPTIONS, type Objectives, type Scenario, type Solar } from './planning.ts';
 export type SummaryInput = {
-    siteAssessments?: SiteAssessments; useHistoricalStudyContext?: boolean; budget: number; dataset?: PlanningDataset;
+    siteAssessments?: SiteAssessments; selectedZoneIds?: string[]; budget: number; dataset?: PlanningDataset;
     excluded: string[];
     threshold: number; minimumCoverage?: number;
     objectives: Objectives;
@@ -19,14 +21,16 @@ export function buildPlanningSummary(input: SummaryInput, exportedAt = new Date(
     const candidates = recommend(input.threshold, input.objectives, zones, input.minimumCoverage, input.siteAssessments);
     const plan = planningResult(candidates, input.budget, input.excluded);
     return {
-        schema_version: 2,
+        schema_version: 3,
         application: 'CoolTown Planner',
         exported_at: exportedAt,
         data_source: { id: dataset.id, title: dataset.title, mode: dataset.mode },
         original_geojson: dataset.originalGeoJSON ?? null,
         site_assessments: input.siteAssessments ?? {},
         site_assessment_notice: 'User-supplied assumptions stored separately; never verified engineering facts or satellite measurements.',
-        historical_study_context: dataset.mode === 'real' && input.useHistoricalStudyContext ? STUDY_CONTEXT : null,
+        dataset_provenance: datasetProvenance(dataset,input.minimumCoverage),
+        selected_zone_ids:(input.selectedZoneIds ?? []).filter(id=>zones.some(z=>z.zone_id===id)),
+        environmental_scores:zones.map(z=>({zone_id:z.zone_id,priority:environmentalQuality(z,input.minimumCoverage).usable?priority(z,input.minimumCoverage):null})),
         data_validation: dataset.issues,
         grouped_validation: warningGroups(zones,input.minimumCoverage),
         preliminary_opportunities: preliminaryOpportunities(zones,input.threshold,input.minimumCoverage),

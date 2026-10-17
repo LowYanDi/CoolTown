@@ -1,6 +1,6 @@
 # CoolTown Planner
 
-React + TypeScript frontend-only planning prototype. Existing five-page design, schematic map, zone selection, multi-objective scoring, solar calculator, scenario comparisons and JSON export are retained. No backend, database, authentication, external API or machine learning is used. All current environmental records and coordinates are synthetic; costs and solar resources are assumptions.
+React + TypeScript frontend-only planning prototype. Existing five-page design, schematic map, zone selection, multi-objective scoring, solar calculator, scenario comparisons and JSON export are retained. No backend, database, authentication or machine learning is used. The only external service requests are map basemap providers. Bundled demo records are synthetic; imported observations remain user-declared. Costs and solar resources are assumptions unless explicitly supplied.
 
 ## Run and build
 
@@ -45,19 +45,19 @@ Whole-roof solar and cool roofs are mutually exclusive in BOTH original and opti
 - src/components/TownMap.tsx: active schematic map, unchanged overall design.
 - src/data/dataset.ts: selected dataset model and local import validation; no real-mode fallback to demo records.
 - src/components/DatasetControls.tsx: local file input, dataset toggle, import errors and validation report.
-- src/components/GeoJSONMap.tsx: active Leaflet renderer with locally bundled CSS. Uses selected validated records, all five map layers, date/source popups, keyboard-accessible zone buttons and shared quality policy. No external tiles or API is requested.
+- src/components/GeoJSONMap.tsx: active Leaflet renderer with locally bundled CSS. Uses selected validated records, all five map layers, date/source popups, keyboard-accessible zone buttons and shared quality policy. Street tiles and optional MapTiler satellite tiles provide geographic context.
 
 In Existing Township Analysis choose Synthetic Demo Map or Real GIS Study Area. Real mode starts empty until a local GeoJSON is accepted. Importing selects it for Overview, Analysis, Recommendations, Budget, Impact and JSON export. Future Township remains a separate synthetic scenario model. Switching datasets clears zone selection and per-candidate exclusions. The imported file remains in memory only and is discarded on refresh; it is not uploaded.
 
-Imports accept a WGS84 FeatureCollection of up to 500 zones and 5 MB. Invalid geometries/duplicate IDs are skipped; invalid measurements become null with visible warnings. Missing/invalid date or source excludes a record from the real layer. Absent data_status is treated as the user's observed declaration on import, but explicit synthetic/assumed/unknown records are excluded. This does not certify the observations. A failed import leaves the last accepted dataset unchanged. No actual Malaysian observations or boundaries are distributed.
+Imports accept a WGS84 FeatureCollection of up to 500 zones and 5 MB. Invalid geometries/duplicate IDs are skipped; invalid measurements become null with visible warnings. Missing/invalid date or source keeps its valid polygon visible with unknown provenance and excludes it from reliable environmental scoring. Absent data_status is treated as the user's observed declaration on import, but explicit synthetic/assumed/unknown records are excluded. This does not certify the observations. A failed import leaves the last accepted dataset unchanged. No actual Malaysian observations or boundaries are distributed.
 
 The exact optimiser still supports at most 22 positive-score eligible candidates. Larger candidate sets show an explicit blocking error and no partial plan; exclusions can reduce the set. JSON export records that error. Missing area_ha contributes no area and is flagged; area-weighted indicators exclude missing/zero areas. No geometry-to-area estimate or site/solar assumptions are invented. Supplying only satellite observations may correctly yield no installable interventions: planting areas, roof exposure and solar suitability need separate evidence.
 
-Properties include zone_id, zone_name, lst_c, ndvi, landcover, observation_date (YYYY-MM-DD), data_source, data_status, data_coverage (percent), area_ha, site_type and site suitability/solar inputs. Coordinates use [longitude,latitude]. See UPGRADE-NOTES.md for the complete contract. Declared observed provenance without date/source becomes unknown. Geometry validation is not topology or survey certification. No real observations are included.
+Properties include zone_id, zone_name, lst_c, ndvi, landcover, observation_date or observation_start / observation_end (YYYY-MM-DD), data_source, data_status, data_coverage (percent), area_ha, site_type and site suitability/solar inputs. Coordinates use [longitude,latitude]. See UPGRADE-NOTES.md for the complete contract. Declared observed provenance without date/source becomes unknown. Geometry validation is not topology or survey certification. No real observations are included.
 
 ## Validation and export
 
-45 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
+53 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
 
 ## Environmental charts and two-stage planning update
 
@@ -77,4 +77,17 @@ Select a quality-valid zone in Existing Township Analysis. Choose Roof, Walkway,
 
 Assessments are stored separately in React state per dataset mode and zone. Switching modes preserves each mode; importing a replacement real dataset clears its assessments. Refresh clears session state. JSON exports original_geojson, unchanged validated zones and site_assessments separately. No imported measurements, source properties or original verification flags are overwritten.
 
-The user-supplied Malaysian study context labels Landsat/Sentinel-2 as historical 2024–2025 composites and ESA WorldCover 2021 as historical reference, not current verified land use. Turn this context off for other files; it never rewrites their source/date fields. All insufficient-data polygons remain gray in every map layer.
+The Environmental Data Provenance panel derives dates, sources and land-cover references from imported records. It has no fixed dataset year or scene dates. Mixed records retain zone-level details.
+
+## Dynamic GIS upgrade
+
+The map separates basemap, environmental layer and opacity (default 50%). Street mode uses standard OpenStreetMap raster tiles with visible attribution and normal browser caching/referrer behaviour. Satellite uses MapTiler satellite-v2 TileJSON and its declared attribution. Satellite is visual context only: no imagery-date equivalence or real-time claim. Missing keys or load errors fall back to street tiles; offline/no-basemap mode retains polygons. A new import fits WGS84 bounds; visual controls do not recreate the map or reset selection. The first quality-valid zone is selected.
+
+Copy .env.example to .env.local and set your public VITE_MAPTILER_KEY. Restart development or rebuild; production hosting must set this build-time variable before deploying. Restrict the key to localhost for local use and your actual production domain. Never supply a private server credential. MapTiler plans, allowed use and quotas apply; satellite service is not guaranteed to be free or unlimited. No account is created or billed by this code.
+
+Optional provenance properties: observation_start, observation_end, observation_date, data_source, data_status, landcover_source, landcover_year and site_verification_source. Valid date pairs can replace a single observation_date. Invalid/reversed dates are flagged; missing metadata is Unavailable. Original JSON is retained separately. Metadata-missing records are unknown and excluded from reliable environmental charts/scores; explicit synthetic/assumed/unknown imports remain excluded from real mode. A verified-site boolean without a supporting source is displayed as a claim with evidence unavailable, never independently authenticated.
+
+Export schema 3 contains dataset_provenance, selected_zone_ids and nullable environmental_scores, with original observations and site assumptions separate. The obsolete historical_study_context export is removed. mapModel.ts defines a future thermal-raster adapter contract only; no raw GeoTIFF renderer or interpolated thermal surface is implemented.
+
+Provider references: https://docs.maptiler.com/cloud/api/tiles/ ; https://docs.maptiler.com/guides/credentials/api-key/ ; https://www.maptiler.com/copyright/ ; https://operations.osmfoundation.org/policies/tiles/ . Do not bulk download/prefetch OSM tiles, disable caching/referrers, or assume an SLA. Use a suitable hosted plan for traffic beyond a small interactive prototype.
+

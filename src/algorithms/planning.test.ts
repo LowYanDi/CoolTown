@@ -1,3 +1,5 @@
+import {datasetProvenance,observationPeriod,firstQualityZone} from '../data/provenance.ts';
+import {geographicBounds,polygonStyle,candidateStage,resolveBasemap} from '../data/mapModel.ts';
 import { emptyAssessment, screenAssessment, type SiteAssessment } from '../data/siteAssessment.ts';
 import { chartRecords, temperatureAxis, temperatureTickText, temperatureText, ndviText, coverageText, warningGroups, shortZone } from '../data/presentation.ts';
 import { preliminaryOpportunities } from './opportunities.ts';
@@ -70,7 +72,7 @@ test('export-ready data contain finite scores and nullable missing observations'
 test('actual JSON export includes objectives, original and optimised scenarios', () => {
     const input = { budget: 100000, excluded: [], threshold: 36.5, objectives: energy, scenarios: [scenario, { ...scenario, land: [0, 0, 0, 0, 0] }], solarInputs: { area: 200, density: .16, yield: 1300, factor: .85, cost: 3200 } };
     const result = JSON.parse(JSON.stringify(buildPlanningSummary(input, '2026-10-16T00:00:00Z')));
-    assert.equal(result.schema_version, 2);
+    assert.equal(result.schema_version, 3);
     assert.equal(result.objectives.normalised.energy, 1);
     assert.ok(result.existing_township.cost <= 100000);
     assert.ok(result.future_scenarios[0].budget_constrained.plan.cost <= scenario.budget);
@@ -148,9 +150,9 @@ test('import validates date/source and explicit provenance without inventing obs
     assert.equal(d.zones[0].data_status, 'observed');
     assert.deepEqual(d.zones[0].geometry, raw.features[0].geometry);
     raw.features[0].properties.observation_date = '2026-02-30';
-    d = importStudyArea(JSON.stringify(raw), 'test-only.geojson'); assert.equal(d.zones.length, 1);
+    d = importStudyArea(JSON.stringify(raw), 'test-only.geojson'); assert.equal(d.zones.length, 2); assert.equal(hasEnvironment(d.zones[0]),false);
     raw.features[1].properties.data_status = 'synthetic';
-    assert.throws(() => importStudyArea(JSON.stringify(raw), 'test.geojson'), /No usable observed/);
+    assert.equal(importStudyArea(JSON.stringify(raw), 'test.geojson').zones.length,1); raw.features[0].properties.data_status='synthetic'; assert.throws(()=>importStudyArea(JSON.stringify(raw),'test'),/No usable observed/);
 });
 test('import rejects malformed, oversized and empty datasets', () => {
     for (const text of ['{bad', '{}', '{"type":"FeatureCollection","features":[]}']) assert.throws(() => importStudyArea(text, 'test'));
@@ -262,9 +264,9 @@ test('assessed rooftop candidates use declared solar inputs and preserve budget 
 });
 test('original GeoJSON and assessment provenance are exported separately',()=>{
     const raw=importedFixture(),text=JSON.stringify(raw),d=importStudyArea(text,'test');const a=readyAssessment();
-    const result=buildPlanningSummary({dataset:d,siteAssessments:{[d.zones[0].zone_id]:a},useHistoricalStudyContext:true,budget:5000,threshold:36.5,excluded:[],objectives:DEFAULT_OBJECTIVES,scenarios:[scenario],solarInputs:{area:200,density:.16,yield:1300,factor:.85,cost:3200}});
+    const result=buildPlanningSummary({dataset:d,siteAssessments:{[d.zones[0].zone_id]:a},budget:5000,threshold:36.5,excluded:[],objectives:DEFAULT_OBJECTIVES,scenarios:[scenario],solarInputs:{area:200,density:.16,yield:1300,factor:.85,cost:3200}});
     assert.deepEqual(result.original_geojson,JSON.parse(text));assert.equal(result.zones[0].site_verified,false);
-    assert.deepEqual(result.site_assessments[d.zones[0].zone_id],a);assert.match(result.historical_study_context!,/2024–2025/);assert.match(result.historical_study_context!,/2021/);
+    assert.deepEqual(result.site_assessments[d.zones[0].zone_id],a);assert.equal(result.dataset_provenance.filename,'test');assert.ok(!('historical_study_context' in result));
     assert.ok(result.existing_township.selected.every(c=>c.preliminary));assert.equal(result.zones[0].planting_area,d.zones[0].planting_area);
 });
 test('clearing assessment restores imported screening, and another zone cannot borrow inputs',()=>{
@@ -273,7 +275,51 @@ test('clearing assessment restores imported screening, and another zone cannot b
     assert.equal(recommend(36.5,DEFAULT_OBJECTIVES,[z],80,{}).length,0);
     assert.equal(recommend(36.5,DEFAULT_OBJECTIVES,[{...z,zone_id:'OTHER'}],80,{[z.zone_id]:a}).length,0);
 });
+
+test('dynamic observation windows support recent historical and future files',()=>{
+ for(const [start,end]of [['2026-01-01','2026-10-17'],['2024-01-01','2025-12-31'],['2031-01-01','2031-04-30']]){
+  const raw=importedFixture();raw.features.forEach((f:any)=>{delete f.properties.observation_date;f.properties.observation_start=start;f.properties.observation_end=end;f.properties.landcover_source='ESA WorldCover';f.properties.landcover_year=2021;});
+  const d=importStudyArea(JSON.stringify(raw),'variable-name.geojson'),p=datasetProvenance(d);
+  assert.equal(p.filename,'variable-name.geojson');assert.equal(p.period,start+' – '+end);assert.equal(p.quality_pass,2);assert.match(p.landcover_references[0],/2021.*historical/);assert.deepEqual(d.originalGeoJSON,raw);
+ }
+});
+test('missing and invalid provenance is unavailable and cannot yield reliable scores',()=>{
+ const raw=importedFixture();raw.features.forEach((f:any)=>{delete f.properties.observation_date;delete f.properties.data_source;});
+ const d=importStudyArea(JSON.stringify(raw),'missing.geojson'),p=datasetProvenance(d);
+ assert.equal(d.zones.length,2);assert.equal(p.period,'Unavailable');assert.equal(p.sources_label,'Unavailable');assert.equal(p.quality_pass,0);assert.ok(d.zones.every(z=>priority(z)===0));assert.equal(recommend(36.5,DEFAULT_OBJECTIVES,d.zones).length,0);
+ raw.features[0].properties.observation_start='2026-12-01';raw.features[0].properties.observation_end='2026-01-01';
+ assert.equal(observationPeriod(importStudyArea(JSON.stringify(raw),'bad-period').zones[0]),'Unavailable');
+});
+test('mixed periods and sources remain per-zone declarations',()=>{
+ const raw=importedFixture();raw.features[1].properties.observation_date='2025-03-04';raw.features[1].properties.data_source='SECOND ARTIFICIAL SOURCE';
+ const p=datasetProvenance(importStudyArea(JSON.stringify(raw),'mixed'));
+ assert.equal(p.period,'Mixed observation periods');assert.equal(p.sources_label,'Multiple declared sources');assert.equal(p.details[1].observation_date,'2025-03-04');assert.equal(p.declared_sources.length,2);
+});
+test('bounds preserve longitude latitude order and choose first quality-valid zone',()=>{
+ const raw=importedFixture();raw.features[0].geometry={type:'Polygon',coordinates:[[[101,3],[102,3],[102,4],[101,4],[101,3]]]};raw.features[1].geometry={type:'MultiPolygon',coordinates:[[[[103,5],[104,5],[104,6],[103,6],[103,5]]]]};raw.features[0].properties.data_coverage=79;
+ const d=importStudyArea(JSON.stringify(raw),'coords');assert.deepEqual(geographicBounds(d.zones),[[3,101],[6,104]]);assert.equal(firstQualityZone(d.zones),d.zones[1].zone_id);assert.deepEqual(d.zones[0].geometry,raw.features[0].geometry);assert.equal(geographicBounds([]),null);
+});
+test('opacity changes only presentation and keeps selection and insufficient outlines',()=>{
+ const z=zones[0],before=JSON.stringify(z),a=polygonStyle(z,z.zone_id,'Surface temperature',36.5,80,.5,'');
+ const b=polygonStyle(z,z.zone_id,'Surface temperature',36.5,80,0,'');assert.equal(b.fillOpacity,0);assert.equal(a.fillColor,b.fillColor);assert.equal(b.weight,4);assert.equal(JSON.stringify(z),before);
+ const low={...z,data_coverage:79};assert.equal(polygonStyle(low,'','Land cover',36.5,80,1,'').fillColor,'#c9cecb');assert.equal(polygonStyle(low,'','Heat hotspots',36.5,80,0,'').dashArray,'5 4');
+ assert.notEqual(polygonStyle(z,'','Heat hotspots',30,80,.5,'').fillColor,polygonStyle(z,'','Heat hotspots',45,80,.5,'').fillColor);
+});
+test('candidate map stages never infer verification from environmental priority',()=>{
+ const z={...zones[0],site_verified:true};assert.equal(candidateStage(z,[],[{zone:z.zone_id}]),'Environmental opportunity · investigation required');
+ assert.match(candidateStage(z,[{zone:z.zone_id,preliminary:true}],[]),/Assumed.*Not verified/);
+ assert.match(candidateStage(z,[{zone:z.zone_id}],[]),/evidence unavailable/);
+ assert.match(candidateStage({...z,site_verification_source:'ARTIFICIAL TEST SURVEY'},[{zone:z.zone_id}],[]),/Independent verification declared/);
+});
+test('missing satellite key falls back without changing independent planning state',()=>{
+ assert.equal(resolveBasemap('satellite',''),'street');assert.equal(resolveBasemap('satellite','test-public-key'),'satellite');assert.equal(resolveBasemap('none',''),'none');assert.equal(resolveBasemap('street',''),'street');
+});
+test('export includes dynamic provenance scores and selection without fixed-year context',()=>{
+ const d=importStudyArea(JSON.stringify(importedFixture()),'export-fixture');const result=buildPlanningSummary({dataset:d,selectedZoneIds:[d.zones[0].zone_id,'MISSING'],budget:5000,threshold:36.5,excluded:[],objectives:DEFAULT_OBJECTIVES,scenarios:[scenario],solarInputs:{area:200,density:.16,yield:1300,factor:.85,cost:3200}});
+ assert.equal(result.dataset_provenance.filename,d.title);assert.equal(result.dataset_provenance.period,'2026-01-01');assert.deepEqual(result.selected_zone_ids,[d.zones[0].zone_id]);assert.equal(result.environmental_scores.length,2);assert.ok(!('historical_study_context'in result));assert.ok(result.dataset_provenance.limitations.length>0);
+});
 console.log(`${passed} test groups passed.`);
+
 
 
 

@@ -88,3 +88,15 @@ Existing Township Analysis now includes Synthetic Demo Map / Real GIS Study Area
 The importer accepts up to 500 zones / 5 MB and uses loadGeoJSON. Without explicit data_status, import mode asserts observed provenance only with valid date/source metadata; explicit synthetic/unknown/assumed records are excluded. Invalid measurements are flagged and remain null; invalid geometry/duplicate IDs are skipped. Missing site and solar inputs are not filled from demo assumptions. The 80% configurable shared quality requirement is preserved. The UI warns when more than 22 eligible candidates prevent exact optimisation; no silent truncation occurs.
 
 The independent Future Township scenarios stay synthetic. Costs remain assumed; environmental scores remain derived heuristics. Imported declarations are not independent satellite verification. No real boundaries, satellite observations or external basemap service are included. See README.md and VALIDATION.txt.
+
+## Chart, warning and planning-stage update
+
+See README.md for the active two-stage rules. Observed-zone budget candidates require complete intervention inputs plus either imported site verification/provenance or a separately declared, complete preliminary assessment. Assessment-derived candidates remain explicitly assumed and unverified. Preliminary opportunities remain separate and uncosted. Grouped warning categories do not invalidate environmental data for absent solar inputs. Charts filter invalid data and use finite numeric ticks; measurements retain full original precision in JSON.
+
+## Site assessment update
+
+New files: src/data/siteAssessment.ts and src/components/SiteAssessmentForm.tsx. recommend accepts optional SiteAssessments as its fifth argument. A validated working projection supplies site assumptions to screening without mutating imported records. The original GeoJSON is preserved for export. No dependencies were added. Use the included installation guide to merge changed source files into the previous charts/planning-stage version.
+
+## Dynamic provenance / GIS
+
+Fixed historical context state, checkbox and export were removed. Date ranges and per-zone metadata now drive the panel and export. Records with valid geometry but incomplete provenance remain visible, gray and excluded from reliable environmental analysis. Map layer colours use actual recommendations/opportunities rather than a priority shortcut. No new npm dependencies. Add .env.local with a public domain-restricted VITE_MAPTILER_KEY for satellite imagery. Street/offline fallback works without a key. See README and INSTALL-CHANGES.md.

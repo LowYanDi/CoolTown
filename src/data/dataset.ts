@@ -18,11 +18,12 @@ export function importStudyArea(text: string, filename: string): PlanningDataset
         return { ...f, properties: { ...p, data_status: p.data_status ?? 'observed' } };
     });
     const loaded = loadGeoJSON({ type: 'FeatureCollection', features });
-    const records = loaded.zones.filter(z => z.data_status === 'observed');
+    const declaredIds = new Set(features.filter(f=>f?.properties?.data_status === 'observed').map(f=>f.properties.zone_id));
+    const records = loaded.zones.filter(z => z.data_status === 'observed' || (z.data_status === 'unknown' && declaredIds.has(z.zone_id)));
     const issues = [...loaded.issues];
-    for (const z of loaded.zones.filter(z => z.data_status !== 'observed')) issues.push(z.zone_id + ': excluded from real dataset; valid observed date/source declaration required.');
+    for (const z of loaded.zones.filter(z => !records.includes(z))) issues.push(z.zone_id + ': excluded from real dataset; valid observed date/source declaration required.');
     for (const z of records) if (z.landcover === 'Unknown') issues.push(z.zone_id + ': missing land cover; verify before planning.');
-    if (!records.length) throw new Error('No usable observed records. Check polygon geometry, unique zone_id, observation_date (YYYY-MM-DD), data_source and data_status. ' + issues.slice(0, 5).join(' '));
+    if (!records.length) throw new Error('No usable observed records. Check polygon geometry, unique zone_id, observation_date or observation_start / observation_end (YYYY-MM-DD), data_source and data_status. ' + issues.slice(0, 5).join(' '));
     return { id: 'local-' + filename, title: filename, mode: 'real', zones: records, issues, originalGeoJSON: raw };
 }
 export function selectDataset(mode: 'demo' | 'real', imported: PlanningDataset | null): PlanningDataset {

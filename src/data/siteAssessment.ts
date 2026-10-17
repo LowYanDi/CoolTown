@@ -35,4 +35,3 @@ export function screenAssessment(original:Zone, assessment:SiteAssessment, minim
     };
     return {zone,issues};
 }
-export const STUDY_CONTEXT = 'User-supplied historical study context: Landsat / Sentinel-2 environmental observations are 2024–2025 composites. ESA WorldCover 2021 is a historical land-cover reference, not current verified land use. Composite periods are not single acquisition dates. Imported source/date fields remain unchanged; confirm this context matches the selected file.';

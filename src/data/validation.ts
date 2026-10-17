@@ -29,13 +29,14 @@ export const displayNumber = (value: number | null, digits = 2) => finite(value)
 
 /** Illustrative quality policy, not a scientifically validated satellite standard. */
 export const DEFAULT_MIN_COVERAGE = 80;
-export const COVERAGE_POLICY = 'Require valid LST, NDVI and valid satellite coverage at or above the configured minimum (default 80%). Illustrative data-quality requirement, not scientific certification. Synthetic records remain synthetic.';
+export const COVERAGE_POLICY = 'Require valid LST, NDVI and valid satellite coverage at or above the configured minimum (default 80%). Illustrative data-quality requirement, not scientific certification. Imported records also require complete declared date/source provenance. Synthetic records remain synthetic.';
 export function coverageThreshold(value = DEFAULT_MIN_COVERAGE): number {
     return inRange(value, 0, 100) ?? DEFAULT_MIN_COVERAGE;
 }
-export function environmentalQuality(z: { lst_c: unknown; ndvi: unknown; data_coverage: unknown }, minimum = DEFAULT_MIN_COVERAGE) {
+export function environmentalQuality(z: { lst_c: unknown; ndvi: unknown; data_coverage: unknown; provenance_complete?: boolean }, minimum = DEFAULT_MIN_COVERAGE) {
     const min = coverageThreshold(minimum), coverage = inRange(z.data_coverage, 0, 100);
     const reasons: string[] = [];
+    if (z.provenance_complete === false) reasons.push('Declared observation period or source is unavailable; provenance incomplete.');
     if (coverage === null) reasons.push('Valid satellite coverage is missing or invalid.');
     else if (coverage <= 0 || coverage < min) reasons.push('Valid satellite coverage is below the required minimum.');
     if (validLST(z.lst_c) === null) reasons.push('Valid surface temperature is missing.');

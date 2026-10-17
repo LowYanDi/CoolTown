@@ -34,6 +34,12 @@ export type Zone = {
     solar_inputs: SolarInputs;
     data_status: Evidence;
     observation_date: string | null;
+    observation_start?: string | null;
+    observation_end?: string | null;
+    landcover_source?: string;
+    landcover_year?: number | null;
+    site_verification_source?: string;
+    provenance_complete?: boolean;
     data_source: string;
     site_input_status: Evidence;
     issues: string[];
@@ -103,9 +109,11 @@ export function loadGeoJSON(input: unknown): {
             ndvi = null;
             warnings.push('Zero coverage: environmental indicators unavailable.');
         }
+        let start = date(p.observation_start), end = date(p.observation_end);
+        if ((p.observation_start && !start) || (p.observation_end && !end) || (start && end && start > end)) { warnings.push('Invalid observation period; unavailable.'); start=null; end=null; }
         const observed = date(p.observation_date), source = label(p.data_source, 'Unknown source');
         let status = evidence(p.data_status);
-        if (status === 'observed' && (!observed || source === 'Unknown source')) {
+        if (status === 'observed' && (!(observed || (start && end)) || source === 'Unknown source')) {
             status = 'unknown';
             warnings.push('Observed claim lacks valid observation date or source.');
         }
@@ -113,7 +121,7 @@ export function loadGeoJSON(input: unknown): {
         const solar: SolarInputs = { density: inRange(s.density, 0, .3), yield: inRange(s.yield, 0, 3000), factor: inRange(s.factor, 0, 1), cost: inRange(s.cost, 0, 100000), suitable: typeof s.suitable === 'boolean' ? s.suitable : null, status: evidence(s.status), source: label(s.source, 'Unknown solar source') };
         if ([solar.density, solar.yield, solar.factor, solar.cost].some(v => v === null) || solar.suitable === null)
             warnings.push('Solar inputs or installation suitability missing/invalid. Solar screening unavailable.');
-        const z: Zone = { zone_id: id, zone_name: label(p.zone_name, id), geometry: g, lst_c: lst, ndvi, data_coverage: coverage, landcover: label(p.landcover, 'Unknown'), site_type: label(p.site_type, 'Unknown'), site_verified: p.site_verified === true, estimated_usable_area: read('estimated_usable_area', 0, 1e8) ?? 0, area_ha: read('area_ha', 0, 1e6) ?? 0, planting_area: read('planting_area', 0, 1e8) ?? 0, roof_exposure: p.roof_exposure === true, shade_deficit: p.shade_deficit === true, solar_inputs: solar, data_status: status, observation_date: observed, data_source: source, site_input_status: evidence(p.site_input_status), issues: warnings };
+        const z: Zone = { zone_id: id, zone_name: label(p.zone_name, id), geometry: g, lst_c: lst, ndvi, data_coverage: coverage, landcover: label(p.landcover, 'Unknown'), site_type: label(p.site_type, 'Unknown'), site_verified: p.site_verified === true, estimated_usable_area: read('estimated_usable_area', 0, 1e8) ?? 0, area_ha: read('area_ha', 0, 1e6) ?? 0, planting_area: read('planting_area', 0, 1e8) ?? 0, roof_exposure: p.roof_exposure === true, shade_deficit: p.shade_deficit === true, solar_inputs: solar, data_status: status, observation_date: observed, observation_start:start, observation_end:end, provenance_complete:status === 'synthetic' || (!!(observed || (start && end)) && source !== 'Unknown source'), landcover_source:label(p.landcover_source, ''), landcover_year:inRange(p.landcover_year,1900,2200), site_verification_source:label(p.site_verification_source,''), data_source: source, site_input_status: evidence(p.site_input_status), issues: warnings };
         zones.push(z);
         issues.push(...warnings.map(w => `${id}: ${w}`));
     });
