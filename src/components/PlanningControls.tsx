@@ -25,7 +25,7 @@ export function FutureBudgetComparison({ scenario, weights }: {
     <div className="panel-heading"><div><h3>Future township budget optimisation</h3><p>Original scenario vs an exact budget-constrained combination · live updates after opening</p></div><Button disabled={!result.valid} onClick={() => setVisible(true)}>{visible ? 'Recalculate feasible plan' : 'Optimise this scenario'}</Button></div>
     <p className="source-note">Only checked planning options are candidates. Unchecked options are excluded. The proposed plan does not overwrite your original scenario or change its land-use allocation.</p>
     {!result.valid && <p className="error" role="alert">{result.errors.join(' ')}</p>}
-    {scenario.options[1] && scenario.options[3] && <p className="error">The original scenario includes two competing whole-roof treatments. Optimisation selects at most one.</p>}
+    {scenario.options[1] && scenario.options[3] && <p className="error">Original scenario is physically infeasible: two whole-roof treatments are selected. Original implementation totals are withheld. Deselect one, or optimise to select at most one.</p>}
     {visible && result.valid && <>
       <div className="table-scroll"><table><thead><tr><th>Calculated indicator</th><th>Original scenario</th><th>Budget-constrained plan</th></tr></thead><tbody>
         {[
@@ -38,7 +38,7 @@ export function FutureBudgetComparison({ scenario, weights }: {
                 ['Solar capacity estimate', `${original.capacity.toFixed(1)} kWp`, `${result.metrics.capacity.toFixed(1)} kWp`],
                 ['Annual solar estimate', `${Math.round(original.generation).toLocaleString()} kWh`, `${Math.round(result.metrics.generation).toLocaleString()} kWh`],
                 ['Heuristic planning points', original.score, result.plan.score]
-            ].map(row => <tr key={row[0]}>{row.map((v, i) => <td key={i}>{v}</td>)}</tr>)}
+            ].map(row => <tr key={row[0]}>{row.map((v, i) => <td key={i}>{i === 1 && !original.valid ? 'Unavailable — roof conflict or invalid inputs' : v}</td>)}</tr>)}
       </tbody></table></div>
       {!result.plan.selected.length && <div className="notice">No positive-score eligible programme fits this budget and objective configuration. The feasible plan spends RM0.</div>}
       <div className="table-scroll"><table><thead><tr><th>Programme</th><th>Assumed cost</th><th>Score /100</th><th>Decision</th></tr></thead><tbody>{result.candidates.map((c, i) => {

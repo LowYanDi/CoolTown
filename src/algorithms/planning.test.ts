@@ -1,3 +1,5 @@
+import { environmentalQuality, coverageThreshold } from '../data/validation.ts';
+import { prepareRealGIS } from '../data/gis.ts';
 import assert from 'node:assert/strict';
 import { buildPlanningSummary } from './summary.ts';
 import { recommend, optimise, solar, screenSolar, scenarioMetrics, optimiseScenario, validateScenario, planningScore, normaliseObjectives, priority, hasEnvironment, DEFAULT_OBJECTIVES, type Candidate, type Scenario } from './planning.ts';
@@ -72,4 +74,59 @@ test('actual JSON export includes objectives, original and optimised scenarios',
     assert.equal(result.solar_calculator.generation, 35360);
     assert.ok(result.existing_township.candidates.every((c: Candidate) => c.evidence && c.scoring));
 });
+
+test('coverage boundary and missing values fail closed', () => {
+    for (const coverage of [null, undefined, NaN, Infinity, -1, 0, 79.99, 101]) {
+        const z = { ...zones[0], data_coverage: coverage } as Zone;
+        assert.equal(environmentalQuality(z).usable, false);
+        assert.equal(environmentalQuality(z).label, 'Insufficient Data');
+        assert.equal(hasEnvironment(z), false); assert.equal(priority(z), 0);
+        assert.equal(recommend(30, DEFAULT_OBJECTIVES, [z]).length, 0);
+    }
+    assert.equal(hasEnvironment({ ...zones[0], data_coverage: 80 }), true);
+    assert.equal(hasEnvironment({ ...zones[0], data_coverage: 79 }, 75), true);
+    assert.equal(hasEnvironment({ ...zones[0], data_coverage: 0 }, 0), false);
+    assert.equal(coverageThreshold(NaN), 80);
+});
+test('all environmental recommendations share coverage and both valid observations', () => {
+    for (const z of zones) for (const patch of [{ data_coverage: null }, { data_coverage: 79 }, { ndvi: null }, { lst_c: null }]) {
+        const record = { ...z, ...patch };
+        const cs = recommend(30, DEFAULT_OBJECTIVES, [record]);
+        assert.ok(cs.every(c => !!c.solar));
+        assert.equal(priority(record), 0);
+    }
+    const z = { ...zones[0], data_coverage: 75 };
+    assert.ok(recommend(30, DEFAULT_OBJECTIVES, [z], 70).some(c => c.name === 'Shade trees'));
+    assert.equal(recommend(30, DEFAULT_OBJECTIVES, [z], 80).length, 0);
+});
+test('original roof conflict withholds metrics and optimiser resolves without mutation', () => {
+    const before = JSON.stringify(scenario), m = scenarioMetrics(scenario);
+    assert.equal(m.valid, false); assert.ok(m.errors.some(e => e.includes('whole-roof')));
+    assert.equal(m.count, 0); assert.equal(m.generation, 0); assert.equal(m.cost, 0);
+    const result = optimiseScenario(scenario); assert.ok(result.valid && result.metrics.valid);
+    assert.ok(!(result.scenario.options[1] && result.scenario.options[3]));
+    assert.equal(JSON.stringify(scenario), before);
+    assert.equal(scenarioMetrics({ ...scenario, options: [false, true, false, false, false, false] }).valid, true);
+});
+test('export carries quality policy and no conflicting original totals', () => {
+    const output = buildPlanningSummary({ budget: 100000, threshold: 30, minimumCoverage: 95, excluded: [], objectives: energy, scenarios: [scenario], solarInputs: { area: 200, density: .16, yield: 1300, factor: .85, cost: 3200 } });
+    assert.equal(output.environmental_quality.minimum_coverage_percent, 95);
+    assert.equal(output.future_scenarios[0].metrics, null);
+    assert.equal(output.future_scenarios[0].valid, false);
+    assert.ok(output.future_scenarios[0].budget_constrained.metrics?.valid);
+});
+test('optional GIS excludes demo and retains observation provenance and quality', () => {
+    assert.equal(prepareRealGIS(demoGeoJSON).collection.features.length, 0);
+    const raw = structuredClone(demoGeoJSON) as any;
+    raw.features[0].properties = { ...raw.features[0].properties, data_status: 'observed', observation_date: '2026-01-01', data_source: 'TEST FIXTURE ONLY', data_coverage: 79 };
+    const gis = prepareRealGIS(raw);
+    assert.equal(gis.collection.features.length, 1);
+    const f = gis.collection.features[0]; assert.equal(f.properties.observation_date, '2026-01-01');
+    assert.equal(f.properties.quality.label, 'Insufficient Data');
+    assert.deepEqual(f.geometry, raw.features[0].geometry);
+    assert.equal(prepareRealGIS(raw, 70).collection.features[0].properties.quality.usable, true);
+    raw.features[0].properties.observation_date = null;
+    assert.equal(prepareRealGIS(raw).collection.features.length, 0);
+});
 console.log(`${passed} test groups passed.`);
+

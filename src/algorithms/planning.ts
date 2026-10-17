@@ -1,5 +1,5 @@
 import { zones, type Zone } from '../data/zones.ts';
-import { clamp01, finite, inRange, validLST, validNDVI, vegetationDeficit, weightedMean } from '../data/validation.ts';
+import { environmentalQuality, DEFAULT_MIN_COVERAGE, clamp01, finite, inRange, validLST, validNDVI, vegetationDeficit, weightedMean } from '../data/validation.ts';
 export type Objectives = {
     cooling: number;
     energy: number;
@@ -20,10 +20,10 @@ export function planningScore(c: Objectives, weights: Objectives = DEFAULT_OBJEC
     const w = normaliseObjectives(weights);
     return Math.round(10000 * (clamp01(c.cooling / 100) * w.cooling + clamp01(c.energy / 100) * w.energy + clamp01(c.biodiversity / 100) * w.biodiversity)) / 100;
 }
-export const hasEnvironment = (z: Zone) => z.data_coverage !== 0 && validLST(z.lst_c) !== null && validNDVI(z.ndvi) !== null;
-export const mean = weightedMean(zones.map(z => ({ value: z.lst_c, weight: 1 })));
+export const hasEnvironment = (z: Zone, minimum = DEFAULT_MIN_COVERAGE) => environmentalQuality(z, minimum).usable;
+export const mean = weightedMean(zones.filter(z => hasEnvironment(z)).map(z => ({ value: z.lst_c, weight: 1 })));
 /** Internal conservative fallback 0; UI must label missing environmental scores Unavailable. */
-export const priority = (z: Zone) => hasEnvironment(z) ? Math.round(100 * (.55 * clamp01((z.lst_c! - 30) / 10) + .45 * vegetationDeficit(z.ndvi)!)) : 0;
+export const priority = (z: Zone, minimum = DEFAULT_MIN_COVERAGE) => hasEnvironment(z, minimum) ? Math.round(100 * (.55 * clamp01((z.lst_c! - 30) / 10) + .45 * vegetationDeficit(z.ndvi)!)) : 0;
 export type Solar = {
     area: number;
     density: number;
@@ -82,22 +82,22 @@ export type Candidate = {
 };
 function make(c: Omit<Candidate, 'score'>, w: Objectives): Candidate { return { ...c, cost: Math.ceil(c.cost * 100) / 100, score: planningScore(c.components, w) }; }
 const vector = (c = 0, e = 0, b = 0): Objectives => ({ cooling: 100 * clamp01(c), energy: 100 * clamp01(e), biodiversity: 100 * clamp01(b) });
-export function recommend(threshold: number, weights: Objectives = DEFAULT_OBJECTIVES, records: Zone[] = zones): Candidate[] {
+export function recommend(threshold: number, weights: Objectives = DEFAULT_OBJECTIVES, records: Zone[] = zones, minimum = DEFAULT_MIN_COVERAGE): Candidate[] {
     return records.flatMap(z => {
         const result: Candidate[] = [], h = validLST(z.lst_c) === null ? 0 : clamp01((z.lst_c! - 30) / 10), d = vegetationDeficit(z.ndvi) ?? 0, planting = clamp01(z.planting_area / 1500), roof = clamp01(z.estimated_usable_area / 500);
         const add = (name: string, cost: number, benefit: string, components: Objectives, scoring: string, reason: string, inputs: string, extra: Partial<Candidate> = {}) => { if (!finite(cost) || cost <= 0)
             return; result.push(make({ id: `${z.zone_id}-${name}`, zone: z.zone_id, name, cost, components, scoring, reason, inputs, benefit, eligible: true, green: 0, generation: 0, capacity: 0, verification: 'Verify ownership, dimensions, utilities and site suitability.', evidence: `Environment: ${z.data_status}; site inputs: ${z.site_input_status}; indicators: calculated heuristics; costs: assumed.`, ...extra }, weights)); };
-        if (hasEnvironment(z) && finite(threshold) && z.lst_c! >= threshold && z.ndvi! < .4 && finite(z.planting_area) && z.planting_area > 0 && !['Water', 'Waterbody'].includes(z.landcover))
+        if (hasEnvironment(z, minimum) && finite(threshold) && z.lst_c! >= threshold && z.ndvi! < .4 && finite(z.planting_area) && z.planting_area > 0 && !['Water', 'Waterbody'].includes(z.landcover))
             add('Shade trees', z.planting_area * 18, 'Urban cooling', vector(.45 * h + .35 * d + .2 * planting, 0, .6 * planting + .4 * d), 'Cooling = 45% heat + 35% deficit + 20% planting area/1500. Biodiversity = 60% planting area/1500 + 40% deficit. Factors clamped to 0–1.', 'Heat, vegetation deficit and explicit planting space support assessment.', `LST ${z.lst_c}°C ≥ ${threshold.toFixed(1)}°C; NDVI ${z.ndvi} < 0.4; ${z.planting_area} m² planting.`, { green: z.planting_area });
         const pv = screenSolar(z);
         if (pv) {
             const carport = z.site_type === 'Parking';
             add(carport ? 'Solar carports' : 'Rooftop solar', pv.cost, 'Clean energy', vector(carport && z.shade_deficit ? .65 : 0, .75 * clamp01(pv.generation / 100000) + .25 * clamp01(pv.inputs.yield * pv.inputs.factor / 1500)), 'Energy = 75% generation/100000 kWh + 25% adjusted yield/1500. Carport cooling = 65 if shade deficit is explicitly true. No LST input.', 'Usable area, positive solar-resource assumptions and explicit suitability support screening.', pv.assumptions, { group: carport ? undefined : `${z.zone_id}-roof`, solar: pv, capacity: pv.capacity, generation: pv.generation, verification: pv.verification });
         }
-        if (z.site_type === 'Roof' && z.roof_exposure && hasEnvironment(z) && finite(z.estimated_usable_area) && z.estimated_usable_area > 0)
+        if (z.site_type === 'Roof' && z.roof_exposure && hasEnvironment(z, minimum) && finite(z.estimated_usable_area) && z.estimated_usable_area > 0)
             add('Cool roofs', z.estimated_usable_area * 65, 'Urban cooling', vector(.65 * h + .35 * roof), 'Cooling = 65% heat + 35% exposed usable roof area/500. No assumed energy or biodiversity benefit.', 'An exposed roof may suit reflective treatment.', `${z.estimated_usable_area} m²; explicit exposure; LST ${z.lst_c}°C.`, { group: `${z.zone_id}-roof` });
         const n = validNDVI(z.ndvi);
-        if (z.data_coverage !== 0 && n !== null && n > .7)
+        if (hasEnvironment(z, minimum) && n !== null && n > .7)
             add('Biodiversity conservation', 15000, 'Biodiversity', vector(0, 0, .7 * clamp01(n) + .3 * clamp01(z.area_ha / 30)), 'Biodiversity = 70% NDVI + 30% zone area/30 ha. NDVI is not a habitat survey.', 'High vegetation index triggers a preliminary conservation assessment.', `NDVI ${n} > 0.70; area ${z.area_ha} ha.`, { preliminary: true, verification: 'Survey species, habitat quality, mature trees and ecological constraints.' });
         return result;
     });
@@ -162,7 +162,7 @@ export function validateScenario(s: Scenario): string[] {
         errors.push('Six boolean options are required.');
     return errors;
 }
-export const SCENARIO_ASSUMPTIONS = 'Whole-programme choices; no partial quantities. Trees/corridors RM18/m² of allocated green space; cool roofs RM65/m²; shade RM25,000; rain gardens RM18,000. PV 0.16 kWp/m² × 1,300 kWh/kWp/year × 0.85; RM3,200/kWp. Carports use editable parking area (default 150 m²) and a 1.35 structural multiplier. Roof PV and cool roofs compete for the same whole-roof area in the optimised plan. Land allocations never change. Site/resource inputs are unverified assumptions.';
+export const SCENARIO_ASSUMPTIONS = 'Whole-programme choices; no partial quantities. Trees/corridors RM18/m² of allocated green space; cool roofs RM65/m²; shade RM25,000; rain gardens RM18,000. PV 0.16 kWp/m² × 1,300 kWh/kWp/year × 0.85; RM3,200/kWp. Carports use editable parking area (default 150 m²) and a 1.35 structural multiplier. Roof PV and cool roofs compete for the same whole-roof area in both original and optimised plans. Conflicting original selections are infeasible; metrics are withheld until resolved. Land allocations never change. Site/resource inputs are unverified assumptions.';
 export function scenarioCandidates(s: Scenario, w: Objectives = DEFAULT_OBJECTIVES): Candidate[] {
     if (validateScenario(s).length)
         return [];
@@ -173,8 +173,11 @@ export function scenarioCandidates(s: Scenario, w: Objectives = DEFAULT_OBJECTIV
     const costs = [green * 18, pv.cost, carport.cost * 1.35, s.roof * 65, 25000, 18000], eligible = [green > 0, s.roof >= 150, (s.carportArea ?? 150) >= 150, s.roof > 0, s.land[3] + s.land[4] > 0, green >= 100];
     return optionNames.map((name, i) => make({ id: `future-${i}`, zone: s.name, name, cost: costs[i], components: vectors[i], scoring: formulas[i], reason: 'Enabled conceptual programme; suitability requires verification.', inputs: SCENARIO_ASSUMPTIONS, verification: i === 1 || i === 2 ? solarVerification : 'Verify area, ownership, site conditions, design and quantities.', benefit: i === 1 || i === 2 ? 'Clean energy' : i === 5 ? 'Biodiversity' : 'Urban cooling', eligible: eligible[i] && s.options[i], group: i === 1 || i === 3 ? 'future-whole-roof' : undefined, green: i === 0 ? green : 0, generation: i === 1 ? pv.generation : i === 2 ? carport.generation : 0, capacity: i === 1 ? pv.capacity : i === 2 ? carport.capacity : 0, evidence: 'Calculated from unverified scenario assumptions.' }, w));
 }
+export function scenarioConflicts(s: Scenario): string[] {
+    return s.options[1] && s.options[3] ? ['Conflicting whole-roof selections: rooftop solar and cool roofs use the same entire roof. Deselect one or optimise to resolve the conflict. Original implementation metrics are unavailable.'] : [];
+}
 export function scenarioMetrics(s: Scenario, w: Objectives = DEFAULT_OBJECTIVES) {
-    const errors = validateScenario(s), active = scenarioCandidates(s, w).filter(c => c.eligible);
+    const errors = [...validateScenario(s), ...scenarioConflicts(s)], active = errors.length ? [] : scenarioCandidates(s, w).filter(c => c.eligible);
     return { valid: !errors.length, errors, green: errors.length ? 0 : s.area * s.land[2] / 100, greenIntervention: active.reduce((n, c) => n + c.green, 0), capacity: active.reduce((n, c) => n + c.capacity, 0), generation: active.reduce((n, c) => n + c.generation, 0), cost: Math.round(active.reduce((n, c) => n + c.cost, 0) * 100) / 100, shade: active.filter(c => ['future-0', 'future-2', 'future-4'].includes(c.id)).length, score: Math.round(active.reduce((n, c) => n + c.score, 0) * 100) / 100, count: active.length };
 }
 export function optimiseScenario(s: Scenario, w: Objectives = DEFAULT_OBJECTIVES) {

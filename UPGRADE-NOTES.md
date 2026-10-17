@@ -1,0 +1,82 @@
+## Objective scoring
+
+The zone environmental screening priority remains separate from intervention planning utility. A score is a transparent preference heuristic, not a measured environmental benefit, impact percentage or scientific rating.
+
+Each intervention has cooling, renewable-energy and biodiversity components in [0,100]. The shared three sliders use relative importance 0–10, normalised by their sum. A candidate's final score is the weighted mean, rounded to two decimals. All-zero objectives yield score zero and an empty optimised plan. Total plan score is the sum of candidate points and may exceed 100. The exact optimiser does not consider cost as an objective; cost is a constraint and lower cost breaks score ties. Saturation anchors below are explicit demo policy choices.
+
+Existing-zone factors, all clamped to [0,1]:
+
+- H = (LST − 30)/10; D = 1 − clamp(NDVI,0,1).
+- P = potential planting area/1500 m²; R = usable roof area/500 m².
+- G = annual generation/100000 kWh; Y = annual yield × adjustment/1500.
+- N = NDVI clamped to [0,1]; A = zone area/30 ha.
+
+Component formulas (multiply factors by 100):
+
+| Intervention | Cooling | Energy | Biodiversity |
+|---|---|---|---|
+| Shade trees | .45H + .35D + .20P | 0 | .60P + .40D |
+| Rooftop solar | 0 | .75G + .25Y | 0 |
+| Solar carports | .65 if an explicit shade deficit exists | .75G + .25Y | 0 |
+| Cool roofs | .65H + .35R | 0 | 0 |
+| Conservation | 0 | 0 | .70N + .30A |
+
+Missing LST or NDVI disables environmental priority and environmental eligibility dependent on it; the UI shows Unavailable. Solar can remain eligible without environmental temperatures if its own inputs are suitable and complete. No environmental coefficient is used for solar generation or energy score. Low NDVI does not by itself prove planting suitability. Known water land cover is excluded from tree screening; all sites still need verification.
+
+## Solar screening
+
+Roof/parking category, at least 150 m² usable area, explicit suitability = true, known assumption/provenance status, positive finite density/yield/performance/cost are required. Unknown or unsuitable records produce no solar candidate. Defaults are explicitly assumed, not measured irradiation:
+
+- Capacity = area × 0.16 kWp/m².
+- Generation = capacity × 1300 kWh/kWp/year × 0.85.
+- Cost = capacity × RM3200/kWp, with a 1.35 carport structure multiplier.
+
+Candidate cards show capacity, generation, installation cost, resource assumptions, provenance and required verification. Site verification is distinct from the provenance of solar-resource inputs. Structural capacity, grid access, irradiation, shading, orientation and permits still need review.
+
+## Future budget optimisation
+
+The comparison considers only the options checked in the original scenario, retaining original quantities. It selects complete programmes; it cannot buy a fraction of a programme. Land allocations do not change. It does not overwrite the original scenario. It updates live after opening the budget comparison. The Impact page also offers this comparison for the scenario most recently edited. JSON export includes both scenarios and both optimised results, even before opening the comparison.
+
+Costs: trees/corridors RM18/m² of allocated green space; cool roofs RM65/m² of usable roof; public shade RM25000; rain gardens RM18000. Rooftop and carport PV use the formulas above; usable parking area is editable (default 150 m²). Carport generation is now included, and roof + carport totals are labelled accordingly.
+
+Future factors: D = 1 − clamp(green percentage/40), S = clamp(green m²/10000), R = clamp(roof m²/2000), A = clamp(site ha/100), G and Y as above. Component formulas:
+
+- Trees/corridors: cooling .5D+.5S; biodiversity .7S+.3D.
+- Rooftop: energy .75G+.25Y.
+- Carports: energy .75G+.25Y; cooling .65 assumes shade need.
+- Cool roof: cooling .65+.35R assumes exposure.
+- Public shade: cooling .6D+.4A.
+- Rain gardens: cooling .2S; biodiversity .6S+.4D. Drainage benefits are not scored by these three objectives.
+
+Tree planting needs positive green area; rain gardens need at least 100 m² green allocation; public shade needs road/infrastructure or other/public-space allocation. PV needs at least 150 m². Invalid area, budget, roof/parking area or land totals block optimisation. Original scenario metrics count eligible enabled programmes; the decision table explains ineligible options.
+
+Whole-roof PV and cool-roof treatments are mutually exclusive in both optimisers. An original scenario may still contain both so the user's input is preserved, but it is explicitly infeasible: all original implementation metrics are withheld in the UI and exported as null with errors. The optimiser can resolve the selection without overwriting it; the optimised scenario is conflict-free.
+
+## Exact solver
+
+Enumerates all subsets for the small demo dataset. Filters excluded/ineligible/invalid/zero-score candidates, enforces group exclusivity and budget in conservative integer cents. Duplicate IDs or more than 22 eligible candidates raise explicit errors. Scores use integer hundredths for stable comparisons. Larger future datasets require a scalable solver; this is not intended for arbitrary city-scale inputs.
+
+## Data validation and future GIS
+
+The original eight demo records now pass through `loadGeoJSON()` in `src/data/loader.ts`. The demo still drives the schematic; no real dataset is loaded and no upload UI was added. To integrate future data, call `parseGeoJSON(text)` or `loadGeoJSON(object)` and examine its `{zones, issues}` result before connecting it to application state and a real map renderer.
+
+The supported contract is a WGS84 FeatureCollection containing Polygon or MultiPolygon Features. Rings must close, have at least four positions, finite longitude/latitude within bounds, and non-zero signed area. Validation does not certify topology (self-intersections/holes), survey accuracy or provenance authenticity. IDs must be non-empty and unique. Invalid geometry/duplicate-ID features are skipped with issues.
+
+Properties: `zone_id`, `zone_name`, `lst_c`, `ndvi`, `landcover`, `observation_date` (YYYY-MM-DD), `data_source`, `data_status` (synthetic/observed/assumed/unknown), `data_coverage` (0–100), `area_ha`, `site_type`, `site_verified`, `site_input_status`, `estimated_usable_area`, `planting_area`, `roof_exposure`, `shade_deficit`, and optional `solar_inputs` (`density`, `yield`, `factor`, `cost`, `suitable`, `status`, `source`). Unknown site area defaults conservatively to zero with an issue; missing site booleans do not become eligibility approvals. Strings are not coerced into numbers.
+
+NDVI values within [-1,1], including negative values, remain valid. Out-of-range values become null with a warning. LST ingestion sanity bounds are [-100,100] °C, not classification thresholds. Zero environmental coverage nulls LST/NDVI. Missing indicators never become observed zeroes. Weighted means exclude any record failing the shared environmental-quality rule: finite LST and NDVI, known positive coverage at or above the configured minimum (default 80%). This illustrative requirement is adjustable in Existing Township Analysis and shared with maps, Overview, hotspots, rankings, environmental recommendation rules and JSON export. Missing or insufficient coverage displays Insufficient Data. Solar uses separate site/resource suitability. An observed claim without a valid date and source becomes unknown. Provenance is metadata supplied by the dataset, not independently verified by this frontend. Current synthetic records have no invented observation dates. Calculated metrics and assumed costs remain separately labelled.
+
+## Validation
+
+Run with Node.js 22.18+ or 24+:
+
+```
+npm.cmd test
+npm.cmd run build
+```
+
+On Linux/macOS use `npm` instead of `npm.cmd`. Existing dependencies suffice. The updated test file exercises the solver against an independent exhaustive oracle, budget bounds, objective changes, eligibility/exclusivity, nullable/environmental validation, solar independence, GeoJSON loading, future optimisation and the actual JSON summary builder.
+
+## Optional map preparation
+
+`src/data/gis.ts` prepares observed records with valid date/source metadata; it excludes demo/assumed/unknown records. `src/components/GeoJSONMap.tsx` accepts a host-provided Leaflet 1.9 runtime and GeoJSON. Load Leaflet CSS in that future host. No dependency or external tile service is added to the current app. The schematic remains active. Prepared component supports coordinate boundaries, observation dates, source, valid coverage, quality colouring, safe text popups and zone selection. Type-checked only; no live Leaflet or real-data verification is claimed. See README.md for integration details.

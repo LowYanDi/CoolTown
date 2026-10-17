@@ -1,16 +1,17 @@
+import { COVERAGE_POLICY, coverageThreshold, environmentalQuality } from '../data/validation.ts';
 import { zones, source, demoDataset } from '../data/zones.ts';
 import { recommend, optimise, optimiseScenario, scenarioMetrics, normaliseObjectives, solar, SCORE_METHOD, SCENARIO_ASSUMPTIONS, type Objectives, type Scenario, type Solar } from './planning.ts';
 export type SummaryInput = {
     budget: number;
     excluded: string[];
-    threshold: number;
+    threshold: number; minimumCoverage?: number;
     objectives: Objectives;
     scenarios: Scenario[];
     solarInputs: Solar;
 };
 /** Pure export builder, shared by the UI and tests. Nothing is sent to a service. */
 export function buildPlanningSummary(input: SummaryInput, exportedAt = new Date().toISOString()) {
-    const candidates = recommend(input.threshold, input.objectives);
+    const candidates = recommend(input.threshold, input.objectives, zones, input.minimumCoverage);
     const plan = optimise(candidates, input.budget, input.excluded);
     return {
         schema_version: 2,
@@ -18,6 +19,7 @@ export function buildPlanningSummary(input: SummaryInput, exportedAt = new Date(
         exported_at: exportedAt,
         data_source: source,
         data_validation: demoDataset.issues,
+        environmental_quality: { minimum_coverage_percent: coverageThreshold(input.minimumCoverage), policy: COVERAGE_POLICY, zones: zones.map(z => ({ zone_id: z.zone_id, ...environmentalQuality(z, input.minimumCoverage) })) },
         notice: 'Synthetic frontend screening prototype. No observed satellite records, validated environmental impacts or engineering approvals.',
         zones,
         objectives: { raw: input.objectives, normalised: normaliseObjectives(input.objectives), method: SCORE_METHOD },

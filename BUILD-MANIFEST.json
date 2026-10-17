@@ -1,0 +1,33 @@
+{
+  "created_at": "2026-10-17T04:55:20.895Z",
+  "tests": 28,
+  "typecheck": "passed",
+  "production_build": "passed",
+  "files": {
+    "src/algorithms/planning.test.ts": "ded43899b9bb6ac829c6186dd275c4cec92ff54f9710bbf078bc057363e1ec6d",
+    "src/algorithms/planning.ts": "14e8d07f328385997542223dd51699b511c56975b13ce8ba24689f1b83f3c07c",
+    "src/algorithms/summary.ts": "474a554d301f3e7521763073f700fb7ab99ddc09d128a0265e2206926ae0a83a",
+    "src/components/GeoJSONMap.tsx": "b52e13d4e89c31042b965f12e43e0f0598da148b256714a5e8f9cf6744c406ce",
+    "src/components/PlanningControls.tsx": "3fbae99628068ee63198d2e87a264ccf33a68f9966aca06e54d7879ac3463453",
+    "src/components/TownMap.tsx": "969f1a473657268fa02132b56e37560f99be98ba4986b4f87d23391ed76d604e",
+    "src/components/ui/button.tsx": "3efcb11204342dd1b60e8f5ac0eb00d48c283cdeeb509345d7fe3bea8898dff0",
+    "src/data/gis.ts": "6d1b63f3f8723c4de8618a33926902a8f1dbb77eab69122810b7ade13df3d3d6",
+    "src/data/loader.ts": "6b9c8273da50342c7ac4879731a1d0e5ef701b49326133bb9c53e91bf172dbfa",
+    "src/data/validation.ts": "04898c99b1e3ee9745471fb82c271884d21ed9dcfe25ce356176f577462844b9",
+    "src/data/zones.ts": "246340aec9a4c2af1c5a699b9def76388f01fa45d332e381be16a188c1717482",
+    "src/main.tsx": "9e0dec0218ad8998b61ad0cce5d1d691c68238f0ae68deb8a1d579b02b025499",
+    "src/styles.css": "4230b5d39844fa758132e8974cf02b3f91dda695d0193d161e1434eb62f53d80",
+    "dist/assets/index-BNSgIiIk.css": "615887529d267437e56af3da7ec6c151ec1f04b7e6a111cfc5794280fd62400d",
+    "dist/assets/index-DPxhIWyE.js": "338dbd80fcec4ee71dbe34761a50bbe13d233b099d447106052ad96073f89eaa",
+    "dist/index.html": "922fae2d66ce506d75a377aa7d73261ad32a2313a1c74a9d13164a1e76447edc",
+    ".gitignore": "58d235ea6a9680eb0c392857939d6c276ee1d545ba083e2ba093d1863f8d1ce0",
+    "index.html": "8684d38e9c54069925f4aae1ad6bb49b7de0ef7cabd683a907a547ff36f27b54",
+    "package.json": "10ba4338a694395d5937661ea00a16924f755266aa52106d989823f870065b6d",
+    "package-lock.json": "17885162d26920be0488d4b49ff436bdb1dcec1f0b80849ea12e679cc7bc1004",
+    "tsconfig.json": "7890b5f16ef76d9e5b95291677afc7db7da01eb8da7ced5a872d7d01f0f05ae6",
+    "vite.config.ts": "5e7f7055310aabd506be72e8da359ef58f185554f3c7fd4f38ac390e9706a9b3",
+    "README.md": "96c521235bd9417bf516a5f901044c9a60fc7de80099c5c409e24f913bdd15a9",
+    "UPGRADE-NOTES.md": "49877ee358ddf105316ca3cd075af8b6ca28ab7e7d1defcdfcef97612201d424",
+    "VALIDATION.txt": "220dc0a5190c1811bc71d485e2da7c48bb2ac0a7b90ca127e650b4085216e748"
+  }
+}
