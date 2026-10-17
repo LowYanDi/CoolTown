@@ -57,4 +57,24 @@ Properties include zone_id, zone_name, lst_c, ndvi, landcover, observation_date 
 
 ## Validation and export
 
-33 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
+45 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
+
+## Environmental charts and two-stage planning update
+
+EnvironmentalCharts uses finite observations passing the shared quality rule. No missing observation is plotted as zero. Temperature axes use numeric padded domains with unique ticks and one-decimal labels; NDVI uses two-decimal labels on [-1,1]. Zone IDs are shortened and angled; full IDs stay in tooltips and exports. Wide zone charts scroll horizontally. Display rounding never modifies stored measurements.
+
+Import warnings are summarised into four expandable categories: missing environmental observations, insufficient coverage, missing solar inputs and unverified site suitability. A zone appears once per category. Additional rejected-record messages remain available. Missing solar inputs disable solar screening only, without invalidating otherwise usable environmental observations.
+
+A. Preliminary Sustainability Opportunities uses valid environmental indicators and recognised land-cover context to suggest further cooling or biodiversity investigation. No cost/area/resource values are fabricated. These opportunities are never passed into the optimiser.
+
+B. Screened Planning Candidates accepts either imported declarations of site verification with complete intervention inputs, or a separately declared Preliminary Site Assessment. The latter always remains Assumed / User-supplied / NOT VERIFIED, even when selected by the budget optimiser. Missing or unsuitable assessments create no candidates. Imported site_verified flags are never changed. Synthetic demo and Future Township workflows remain separate.
+
+JSON export adds preliminary_opportunities and grouped_validation, preserving original observations and the feasible plan separately. The actual user Landsat/Sentinel-2 file was not available during this update; automated and browser checks use artificial fixtures, not claimed real observations.
+
+## Preliminary Site Assessment
+
+Select a quality-valid zone in Existing Township Analysis. Choose Roof, Walkway, Parking or Open Space, enter assumed usable area, declare potentially suitable status, and acknowledge assumed costs. Roof exposure and shade need are explicit assumptions. Optional solar fields start blank and require density, yield, adjustment, unit cost and a rationale/source; incomplete solar inputs disable solar only. Existing threshold, eligibility and mutually exclusive whole-roof rules still apply. Assumptions do not guarantee a candidate if other screening rules fail.
+
+Assessments are stored separately in React state per dataset mode and zone. Switching modes preserves each mode; importing a replacement real dataset clears its assessments. Refresh clears session state. JSON exports original_geojson, unchanged validated zones and site_assessments separately. No imported measurements, source properties or original verification flags are overwritten.
+
+The user-supplied Malaysian study context labels Landsat/Sentinel-2 as historical 2024–2025 composites and ESA WorldCover 2021 as historical reference, not current verified land use. Turn this context off for other files; it never rewrites their source/date fields. All insufficient-data polygons remain gray in every map layer.

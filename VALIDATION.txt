@@ -1,6 +1,6 @@
 CoolTown Planner — Real GIS integration validation
 
-33 test groups pass, preserving the prior 28 groups. New coverage includes local import
+45 test groups pass, preserving the prior 28 groups. New coverage includes local import
 provenance, malformed/oversized/empty imports, invalid environmental observations,
 missing solar suitability, dataset selection and export isolation, and explicit exact
 optimiser capacity errors. Artificial test fixtures are NOT real satellite observations.
@@ -24,3 +24,23 @@ Browser checks on production preview (artificial QA fixtures only): real mode in
 empty, local file import, two-zone dataset isolation, low-coverage warning/ranking,
 imported-zone-only recommendations and budget, Leaflet controls and no console errors.
 No actual Malaysian observed dataset was available for scientific/geographic validation.
+
+Chart/stage update: six new test groups verify finite chart rows and precision, unique
+temperature ticks for narrow/constant/negative ranges, grouped category counts, separation
+of opportunities from observed construction candidates, solar independence and stage export.
+Browser QA: imported artificial high-precision GeoJSON with long IDs and no solar inputs;
+2 valid environmental zones retained, grouped solar/site warnings shown, preliminary
+opportunities available, no unverified construction candidates. Temperature ticks 36.8,
+37.0,37.2,37.4 and two-decimal NDVI ticks were readable, without overlapping Y labels.
+No browser console errors. Actual user Landsat/Sentinel-2 file was not supplied.
+
+Site assessment update: all 45 algorithm test groups and TypeScript/production build passed.
+Six added groups cover incomplete/unsuitable inputs, clearly labelled assumed candidates,
+20 artificial records with 11 passing and 9 insufficient, solar independence and whole-roof
+exclusivity/budget limits, unchanged original GeoJSON plus separate exported assumptions,
+and clearing/dataset isolation.
+Production browser QA: imported the labelled artificial 20-zone fixture; confirmed 11/20
+quality-pass, 9 insufficient, compact warnings, no candidate before assessment, and a
+100 m2 assumed Walkway produced an explicitly preliminary tree candidate costing RM1800.
+Insufficient-zone assessment controls were disabled. No browser console errors.
+The actual user dataset was not supplied; these checks do not certify its provenance.

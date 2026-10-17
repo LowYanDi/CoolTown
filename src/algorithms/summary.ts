@@ -1,9 +1,12 @@
+import { STUDY_CONTEXT, type SiteAssessments } from '../data/siteAssessment.ts';
+import { preliminaryOpportunities } from './opportunities.ts';
+import { warningGroups } from '../data/presentation.ts';
 import { DEMO_DATASET, type PlanningDataset } from '../data/dataset.ts';
 import { COVERAGE_POLICY, coverageThreshold, environmentalQuality } from '../data/validation.ts';
 import { zones, source, demoDataset } from '../data/zones.ts';
 import { recommend, planningResult, optimiseScenario, scenarioMetrics, normaliseObjectives, solar, SCORE_METHOD, SCENARIO_ASSUMPTIONS, type Objectives, type Scenario, type Solar } from './planning.ts';
 export type SummaryInput = {
-    budget: number; dataset?: PlanningDataset;
+    siteAssessments?: SiteAssessments; useHistoricalStudyContext?: boolean; budget: number; dataset?: PlanningDataset;
     excluded: string[];
     threshold: number; minimumCoverage?: number;
     objectives: Objectives;
@@ -13,14 +16,20 @@ export type SummaryInput = {
 /** Pure export builder, shared by the UI and tests. Nothing is sent to a service. */
 export function buildPlanningSummary(input: SummaryInput, exportedAt = new Date().toISOString()) {
     const dataset = input.dataset ?? DEMO_DATASET, zones = dataset.zones;
-    const candidates = recommend(input.threshold, input.objectives, zones, input.minimumCoverage);
+    const candidates = recommend(input.threshold, input.objectives, zones, input.minimumCoverage, input.siteAssessments);
     const plan = planningResult(candidates, input.budget, input.excluded);
     return {
         schema_version: 2,
         application: 'CoolTown Planner',
         exported_at: exportedAt,
         data_source: { id: dataset.id, title: dataset.title, mode: dataset.mode },
+        original_geojson: dataset.originalGeoJSON ?? null,
+        site_assessments: input.siteAssessments ?? {},
+        site_assessment_notice: 'User-supplied assumptions stored separately; never verified engineering facts or satellite measurements.',
+        historical_study_context: dataset.mode === 'real' && input.useHistoricalStudyContext ? STUDY_CONTEXT : null,
         data_validation: dataset.issues,
+        grouped_validation: warningGroups(zones,input.minimumCoverage),
+        preliminary_opportunities: preliminaryOpportunities(zones,input.threshold,input.minimumCoverage),
         environmental_quality: { minimum_coverage_percent: coverageThreshold(input.minimumCoverage), policy: COVERAGE_POLICY, zones: zones.map(z => ({ zone_id: z.zone_id, ...environmentalQuality(z, input.minimumCoverage) })) },
         notice: dataset.mode === 'demo' ? 'Synthetic demonstration. No observed satellite data.' : 'User-imported observed records; provenance is declared, not independently verified. Derived indicators and assumed costs are not engineering approval.',
         zones,

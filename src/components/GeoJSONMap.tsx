@@ -1,3 +1,4 @@
+import { temperatureText, ndviText, coverageText } from '../data/presentation';
 import { useEffect, useRef, useState } from 'react';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -29,7 +30,7 @@ export function GeoJSONMap({ records, selected, onSelect, minimumCoverage = DEFA
                     const z = feature.properties as Zone;
                     const popup = document.createElement('div');
                     popup.textContent = [z.zone_name, 'Observed data (user declaration)', 'Observation: ' + z.observation_date, 'Source: ' + z.data_source,
-                        'Valid coverage: ' + (z.data_coverage ?? 'missing') + '%', 'LST: ' + (z.lst_c ?? 'missing') + ' °C; NDVI: ' + (z.ndvi ?? 'missing'),
+                        'Valid coverage: ' + coverageText(z.data_coverage), 'LST: ' + temperatureText(z.lst_c) + ' °C; NDVI: ' + ndviText(z.ndvi),
                         environmentalQuality(z, minimumCoverage).label, ...environmentalQuality(z, minimumCoverage).reasons].join(' | ');
                     polygon.bindPopup(popup);
                     polygon.on('click', () => callback.current(z.zone_id));
@@ -47,7 +48,8 @@ export function GeoJSONMap({ records, selected, onSelect, minimumCoverage = DEFA
             const z = feature?.properties as Zone;
             const good = environmentalQuality(z, minimumCoverage).usable;
             let fill = '#c9cecb';
-            if (layer === 'Land cover') fill = /vegetation|forest|park/i.test(z.landcover) ? '#80b796' : /water/i.test(z.landcover) ? '#b8d4d4' : '#d2c9ae';
+            if (!good) fill = '#c9cecb';
+            else if (layer === 'Land cover') fill = /vegetation|forest|park/i.test(z.landcover) ? '#80b796' : /water/i.test(z.landcover) ? '#b8d4d4' : '#d2c9ae';
             else if (good) {
                 if (layer === 'Vegetation / NDVI') fill = `hsl(151 28% ${83 - clamp01(z.ndvi!) * 45}%)`;
                 else if (layer === 'Heat hotspots') fill = z.lst_c! >= threshold ? '#de956e' : '#cad8ca';

@@ -1,3 +1,6 @@
+import { emptyAssessment, screenAssessment, type SiteAssessment } from '../data/siteAssessment.ts';
+import { chartRecords, temperatureAxis, temperatureTickText, temperatureText, ndviText, coverageText, warningGroups, shortZone } from '../data/presentation.ts';
+import { preliminaryOpportunities } from './opportunities.ts';
 import { importStudyArea, selectDataset, DEMO_DATASET, MAX_IMPORT_BYTES } from '../data/dataset.ts';
 import { planningResult } from './planning.ts';
 import { environmentalQuality, coverageThreshold } from '../data/validation.ts';
@@ -182,6 +185,96 @@ test('large imported candidate sets fail explicitly and exclusions restore exact
     const blocked = planningResult(cs,100); assert.match(blocked.error!, /22/); assert.equal(blocked.selected.length,0);
     const allowed = planningResult(cs,100,['22']); assert.equal(allowed.error,null); assert.equal(allowed.selected.length,22);
 });
+
+test('chart values exclude invalid observations and preserve full precision',()=>{
+    const z={...zones[0],lst_c:37.123456,ndvi:.123456};
+    const rows=chartRecords([z,{...z,zone_id:'bad',lst_c:NaN},{...z,zone_id:'null',ndvi:null},{...z,zone_id:'low',data_coverage:79}]);
+    assert.equal(rows.length,1);assert.equal(rows[0].lst_c,37.123456);assert.equal(rows[0].ndvi,.123456);
+    assert.equal(temperatureText(z.lst_c),'37.1');assert.equal(ndviText(z.ndvi),'0.12');assert.equal(coverageText(99.999),'100.0%');
+    assert.equal(temperatureText(null),'Insufficient Data');assert.equal(coverageText(101),'Insufficient Data');
+    assert.ok(shortZone('A'.repeat(100)).length<20);
+});
+test('temperature ticks are finite unique readable and span observations',()=>{
+    for(const values of [[37.123,37.124],[36,36],[-10,45],[20,21,22,23],[-100,100],[],[null,NaN,Infinity]]){
+        const axis=temperatureAxis(values);assert.ok(axis.ticks.length<=7);
+        assert.equal(new Set(axis.ticks.map(temperatureTickText)).size,axis.ticks.length);
+        assert.ok(axis.ticks.every(Number.isFinite));
+        for(const value of values)if(typeof value==='number'&&Number.isFinite(value)){assert.ok(axis.domain[0]<=value);assert.ok(axis.domain[1]>=value);}
+    }
+});
+test('warnings group zones once per category and keep environmental usability',()=>{
+    const raw=importedFixture();delete raw.features[0].properties.solar_inputs;
+    raw.features[1].properties.data_coverage=60;
+    const d=importStudyArea(JSON.stringify(raw),'warnings'),g=warningGroups(d.zones);
+    assert.equal(g.length,4);assert.equal(g[0].details.length,0);assert.equal(g[1].details.length,1);
+    assert.equal(g[2].details.length,1);assert.equal(g[3].details.length,2);
+    assert.equal(chartRecords(d.zones).length,1);assert.equal(screenSolar(d.zones[0]),null);
+});
+test('observed environmental opportunities do not become construction candidates',()=>{
+    const z={...zones[0],data_status:'observed' as const,site_verified:false,site_input_status:'unknown' as const,planting_area:0};
+    assert.ok(preliminaryOpportunities([z],36.5).length>0);assert.equal(recommend(36.5,DEFAULT_OBJECTIVES,[z]).length,0);
+    assert.equal(preliminaryOpportunities([{...z,data_coverage:79}],36.5).length,0);
+    assert.equal(preliminaryOpportunities([{...z,landcover:'Unknown'}],36.5).length,0);
+    assert.equal(preliminaryOpportunities([{...z,landcover:'Waterbody'}],36.5).length,0);
+    const ready={...z,site_verified:true,site_input_status:'observed' as const,planting_area:100};
+    assert.ok(recommend(36.5,DEFAULT_OBJECTIVES,[ready]).some(c=>c.name==='Shade trees'));
+    assert.equal(recommend(36.5,DEFAULT_OBJECTIVES,[{...ready,planting_area:0}]).length,0);
+});
+test('solar screening stays independent while observed construction requires verification',()=>{
+    const roof={...zones[1],data_status:'observed' as const,site_verified:false,lst_c:null,ndvi:null};
+    assert.ok(screenSolar(roof));assert.equal(recommend(36.5,energy,[roof]).length,0);
+    assert.ok(recommend(36.5,energy,[{...roof,site_verified:true}]).some(c=>!!c.solar));
+});
+test('exports preserve raw precision and separate opportunities from budget',()=>{
+    const d=importStudyArea(JSON.stringify(importedFixture()),'test');d.zones[0].lst_c=38.123456789;
+    const result=buildPlanningSummary({dataset:d,budget:100000,threshold:36.5,excluded:[],objectives:DEFAULT_OBJECTIVES,scenarios:[scenario],solarInputs:{area:200,density:.16,yield:1300,factor:.85,cost:3200}});
+    assert.equal(result.zones[0].lst_c,38.123456789);assert.ok(result.preliminary_opportunities.length);
+    assert.ok(result.preliminary_opportunities.every(o=>!o.budgetEligible));assert.equal(result.existing_township.selected.length,0);
+    assert.equal(result.grouped_validation.length,4);
+});
+
+const readyAssessment = (patch:Partial<SiteAssessment>={}):SiteAssessment => ({...emptyAssessment(),siteType:'Walkway',area:100,suitability:'potentially-suitable',costsAcknowledged:true,...patch});
+test('incomplete and unsuitable assessment inputs cannot create budget candidates',()=>{
+    const z={...zones[0],data_status:'observed' as const,site_verified:false,site_input_status:'unknown' as const,planting_area:0};
+    for(const a of [emptyAssessment(),readyAssessment({area:null}),readyAssessment({area:NaN}),readyAssessment({area:-1}),readyAssessment({suitability:'unsuitable'}),readyAssessment({costsAcknowledged:false})]){
+        assert.equal(screenAssessment(z,a).zone,null);assert.equal(recommend(36.5,DEFAULT_OBJECTIVES,[z],80,{[z.zone_id]:a}).length,0);
+    }
+});
+test('assumed site inputs generate clearly labelled candidates without mutating observations',()=>{
+    const z={...zones[0],data_status:'observed' as const,site_verified:false,planting_area:0};const original=JSON.stringify(z),a=readyAssessment();const before=JSON.stringify(a);
+    const cs=recommend(36.5,DEFAULT_OBJECTIVES,[z],80,{[z.zone_id]:a});assert.equal(cs.length,1);
+    assert.equal(cs[0].preliminary,true);assert.match(cs[0].evidence,/NOT VERIFIED/);assert.equal(cs[0].cost,1800);assert.equal(cs[0].green,100);
+    assert.equal(JSON.stringify(z),original);assert.equal(JSON.stringify(a),before);assert.equal(screenAssessment(z,a).zone?.site_verified,false);
+});
+test('20-zone fixture keeps nine insufficient zones out of assessed recommendations',()=>{
+    const records=Array.from({length:20},(_,i)=>({...zones[0],zone_id:'ARTIFICIAL-'+i,data_status:'observed' as const,site_verified:false,data_coverage:i<11?85:79}));
+    const assessments=Object.fromEntries(records.map(z=>[z.zone_id,readyAssessment()]));
+    assert.equal(chartRecords(records).length,11);assert.equal(recommend(36.5,DEFAULT_OBJECTIVES,records,80,assessments).length,11);
+    for(const z of records.slice(11))assert.equal(screenAssessment(z,assessments[z.zone_id]).zone,null);
+});
+test('assessed rooftop candidates use declared solar inputs and preserve budget exclusivity',()=>{
+    const z={...zones[1],data_status:'observed' as const,site_verified:false};const a=readyAssessment({siteType:'Roof',area:200,roofExposed:true,solarEnabled:true,solar:{density:.16,annualYield:1300,factor:.85,unitCost:3200,source:'ARTIFICIAL TEST ASSUMPTIONS'}});
+    const cs=recommend(36.5,DEFAULT_OBJECTIVES,[z],80,{[z.zone_id]:a});assert.equal(cs.length,2);assert.ok(cs.every(c=>c.preliminary));
+    const result=optimise(cs,200000);assert.equal(result.selected.length,1);assert.ok(result.cost<=200000);assert.equal(optimise(cs,100).selected.length,0);
+    assert.equal(recommend(36.5,DEFAULT_OBJECTIVES,[z],80,{[z.zone_id]:{...a,solar:{...a.solar,annualYield:null}}}).filter(c=>c.solar).length,0);
+    const pv=cs.find(c=>c.solar)!;assert.equal(pv.generation,35360);
+    assert.equal(recommend(36.5,DEFAULT_OBJECTIVES,[{...z,lst_c:32}],80,{[z.zone_id]:a}).find(c=>c.solar)?.generation,pv.generation);
+});
+test('original GeoJSON and assessment provenance are exported separately',()=>{
+    const raw=importedFixture(),text=JSON.stringify(raw),d=importStudyArea(text,'test');const a=readyAssessment();
+    const result=buildPlanningSummary({dataset:d,siteAssessments:{[d.zones[0].zone_id]:a},useHistoricalStudyContext:true,budget:5000,threshold:36.5,excluded:[],objectives:DEFAULT_OBJECTIVES,scenarios:[scenario],solarInputs:{area:200,density:.16,yield:1300,factor:.85,cost:3200}});
+    assert.deepEqual(result.original_geojson,JSON.parse(text));assert.equal(result.zones[0].site_verified,false);
+    assert.deepEqual(result.site_assessments[d.zones[0].zone_id],a);assert.match(result.historical_study_context!,/2024–2025/);assert.match(result.historical_study_context!,/2021/);
+    assert.ok(result.existing_township.selected.every(c=>c.preliminary));assert.equal(result.zones[0].planting_area,d.zones[0].planting_area);
+});
+test('clearing assessment restores imported screening, and another zone cannot borrow inputs',()=>{
+    const z={...zones[0],data_status:'observed' as const,site_verified:false};const a=readyAssessment();
+    assert.ok(recommend(36.5,DEFAULT_OBJECTIVES,[z],80,{[z.zone_id]:a}).length);
+    assert.equal(recommend(36.5,DEFAULT_OBJECTIVES,[z],80,{}).length,0);
+    assert.equal(recommend(36.5,DEFAULT_OBJECTIVES,[{...z,zone_id:'OTHER'}],80,{[z.zone_id]:a}).length,0);
+});
 console.log(`${passed} test groups passed.`);
+
+
 
 

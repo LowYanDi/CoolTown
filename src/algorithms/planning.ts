@@ -1,3 +1,5 @@
+import { screenAssessment, type SiteAssessments } from '../data/siteAssessment.ts';
+import { constructionEvidence } from './opportunities.ts';
 import { zones, type Zone } from '../data/zones.ts';
 import { environmentalQuality, DEFAULT_MIN_COVERAGE, clamp01, finite, inRange, validLST, validNDVI, vegetationDeficit, weightedMean } from '../data/validation.ts';
 export type Objectives = {
@@ -82,12 +84,17 @@ export type Candidate = {
 };
 function make(c: Omit<Candidate, 'score'>, w: Objectives): Candidate { return { ...c, cost: Math.ceil(c.cost * 100) / 100, score: planningScore(c.components, w) }; }
 const vector = (c = 0, e = 0, b = 0): Objectives => ({ cooling: 100 * clamp01(c), energy: 100 * clamp01(e), biodiversity: 100 * clamp01(b) });
-export function recommend(threshold: number, weights: Objectives = DEFAULT_OBJECTIVES, records: Zone[] = zones, minimum = DEFAULT_MIN_COVERAGE): Candidate[] {
-    return records.flatMap(z => {
+export function recommend(threshold: number, weights: Objectives = DEFAULT_OBJECTIVES, records: Zone[] = zones, minimum = DEFAULT_MIN_COVERAGE, assessments: SiteAssessments = {}): Candidate[] {
+    return records.flatMap(observation => {
+        const assessment = Object.prototype.hasOwnProperty.call(assessments, observation.zone_id) ? assessments[observation.zone_id] : undefined;
+        const projection = assessment ? screenAssessment(observation, assessment, minimum) : null;
+        if (assessment && !projection?.zone) return [];
+        const z = projection?.zone ?? observation;
+        if (!assessment && !constructionEvidence(z)) return [];
         const result: Candidate[] = [], h = validLST(z.lst_c) === null ? 0 : clamp01((z.lst_c! - 30) / 10), d = vegetationDeficit(z.ndvi) ?? 0, planting = clamp01(z.planting_area / 1500), roof = clamp01(z.estimated_usable_area / 500);
         const add = (name: string, cost: number, benefit: string, components: Objectives, scoring: string, reason: string, inputs: string, extra: Partial<Candidate> = {}) => { if (!finite(cost) || cost <= 0)
-            return; result.push(make({ id: `${z.zone_id}-${name}`, zone: z.zone_id, name, cost, components, scoring, reason, inputs, benefit, eligible: true, green: 0, generation: 0, capacity: 0, verification: 'Verify ownership, dimensions, utilities and site suitability.', evidence: `Environment: ${z.data_status}; site inputs: ${z.site_input_status}; indicators: calculated heuristics; costs: assumed.`, ...extra }, weights)); };
-        if (hasEnvironment(z, minimum) && finite(threshold) && z.lst_c! >= threshold && z.ndvi! < .4 && finite(z.planting_area) && z.planting_area > 0 && !['Water', 'Waterbody'].includes(z.landcover))
+            return; result.push(make({ id: `${z.zone_id}-${name}`, zone: z.zone_id, name, cost, components, scoring, reason, inputs, benefit, eligible: true, green: 0, generation: 0, capacity: 0, verification: 'Verify ownership, dimensions, utilities and site suitability.', evidence: `Planning candidate only, not engineering approval; site verification: ${z.site_verified ? 'declared verified' : 'synthetic demo assumptions, not verified'}; Environment: ${z.data_status}; site inputs: ${z.site_input_status}; indicators: calculated heuristics; costs: assumed.`, ...extra }, weights)); };
+        if (hasEnvironment(z, minimum) && finite(threshold) && z.lst_c! >= threshold && z.ndvi! < .4 && finite(z.planting_area) && z.planting_area > 0 && z.landcover.trim() !== '' && z.landcover !== 'Unknown' && !/water|river|lake|wetland/i.test(z.landcover))
             add('Shade trees', z.planting_area * 18, 'Urban cooling', vector(.45 * h + .35 * d + .2 * planting, 0, .6 * planting + .4 * d), 'Cooling = 45% heat + 35% deficit + 20% planting area/1500. Biodiversity = 60% planting area/1500 + 40% deficit. Factors clamped to 0–1.', 'Heat, vegetation deficit and explicit planting space support assessment.', `LST ${z.lst_c}°C ≥ ${threshold.toFixed(1)}°C; NDVI ${z.ndvi} < 0.4; ${z.planting_area} m² planting.`, { green: z.planting_area });
         const pv = screenSolar(z);
         if (pv) {
@@ -97,9 +104,9 @@ export function recommend(threshold: number, weights: Objectives = DEFAULT_OBJEC
         if (z.site_type === 'Roof' && z.roof_exposure && hasEnvironment(z, minimum) && finite(z.estimated_usable_area) && z.estimated_usable_area > 0)
             add('Cool roofs', z.estimated_usable_area * 65, 'Urban cooling', vector(.65 * h + .35 * roof), 'Cooling = 65% heat + 35% exposed usable roof area/500. No assumed energy or biodiversity benefit.', 'An exposed roof may suit reflective treatment.', `${z.estimated_usable_area} m²; explicit exposure; LST ${z.lst_c}°C.`, { group: `${z.zone_id}-roof` });
         const n = validNDVI(z.ndvi);
-        if (hasEnvironment(z, minimum) && n !== null && n > .7)
+        if (!assessment && hasEnvironment(z, minimum) && finite(z.area_ha) && z.area_ha > 0 && n !== null && n > .7)
             add('Biodiversity conservation', 15000, 'Biodiversity', vector(0, 0, .7 * clamp01(n) + .3 * clamp01(z.area_ha / 30)), 'Biodiversity = 70% NDVI + 30% zone area/30 ha. NDVI is not a habitat survey.', 'High vegetation index triggers a preliminary conservation assessment.', `NDVI ${n} > 0.70; area ${z.area_ha} ha.`, { preliminary: true, verification: 'Survey species, habitat quality, mature trees and ecological constraints.' });
-        return result;
+        return assessment ? result.map(c => ({ ...c, preliminary: true, reason: c.reason + ' Preliminary intervention based on user-supplied site assumptions; not verified.', evidence: 'Assumed / User-supplied site assessment. Environmental measurements: ' + observation.data_status + '. Costs: assumed. Site verification: NOT VERIFIED. No engineering approval.', inputs: c.inputs + ' Assessment notes: ' + assessment.notes, verification: c.verification + ' Independently verify all declared site assumptions before implementation.' })) : result;
     });
 }
 /** Exact subset search: conservative integer cents and hundredths of objective points. */

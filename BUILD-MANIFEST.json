@@ -1,24 +1,29 @@
 {
-  "generated_at": "2026-10-17T07:00:58.263Z",
+  "generated_at": "2026-10-17T10:13:49.107Z",
   "node": "v24.20.0",
   "build_command": "tsc --noEmit && vite build --configLoader native",
   "source_sha256": {
-    "src/algorithms/planning.test.ts": "878f1e703c1982c3eae9537ed12f60422f66cc38378ba6e4991d825705250fcb",
-    "src/algorithms/planning.ts": "8c3b04f53c0ddf4e6d4afa2ab49eecd8d81c984dfec42d66bd47f26824f1eab1",
-    "src/algorithms/summary.ts": "5e4d9cd2c9f197003216e90dd57273d3a5734820c7c0465afe64d74ba23f929a",
-    "src/components/DatasetControls.tsx": "a90f374dfc7c3d3a1ea68adb87640ff02805eadbe00558c7edf741d0b2ba39b0",
-    "src/components/GeoJSONMap.tsx": "16b85c9599ca864f989f9cd3847e938ca058d6ea669faecc6c8e0e4c586b86dc",
+    "src/algorithms/opportunities.ts": "5fa4488adc7ee8b3d76f7baf6670041e60f0d3dda37baf91858122a9f06a415f",
+    "src/algorithms/planning.test.ts": "92a10a5ddc3e241ca4beac4776ad2ba61e42ba333e967ebadfe16bbcf962b5cf",
+    "src/algorithms/planning.ts": "3207c8d5375a52e94f6475e4cfa9351c3794268097e0bd7b781d49034b4a1f29",
+    "src/algorithms/summary.ts": "d9994c4e5f6950706a0528dff92194ff522b3186840eb30342dca3773830abda",
+    "src/components/DatasetControls.tsx": "a62d5bd86e58bea2dc9234972076fa232c4b33e97ea62e47bf5cce2d08dceb17",
+    "src/components/EnvironmentalCharts.tsx": "71cd191a8b82c97ce1e49f27697a2bd3c25f78b15333304e9c1fd386639aab75",
+    "src/components/GeoJSONMap.tsx": "0918dcad57a65075acca9f2b7027f3a89e07cbb02f1e6355c3a8b0c6f9b57cce",
     "src/components/PlanningControls.tsx": "3fbae99628068ee63198d2e87a264ccf33a68f9966aca06e54d7879ac3463453",
-    "src/components/TownMap.tsx": "969f1a473657268fa02132b56e37560f99be98ba4986b4f87d23391ed76d604e",
+    "src/components/SiteAssessmentForm.tsx": "d55d0b22a7a7b4e8bbb47829da2f8e7f7455c2b31dafc397fcb4fde76b39f49f",
+    "src/components/TownMap.tsx": "4b8f81781ab6bbc9b2eaa14c85ad13ebedada6bdc6c7a4e8d89c627dc1e1696d",
     "src/components/ui/button.tsx": "3efcb11204342dd1b60e8f5ac0eb00d48c283cdeeb509345d7fe3bea8898dff0",
-    "src/data/dataset.ts": "fcb179154fdbd786ab79e23da8101a70b80dabd0e8fc08e3071d6249c078dedc",
+    "src/data/dataset.ts": "b167a5f616799d3ec368ce1fa6506295ddbbc41e95ec8bf5c1ab7905ca1b9153",
     "src/data/gis.ts": "6d1b63f3f8723c4de8618a33926902a8f1dbb77eab69122810b7ade13df3d3d6",
     "src/data/loader.ts": "6b9c8273da50342c7ac4879731a1d0e5ef701b49326133bb9c53e91bf172dbfa",
+    "src/data/presentation.ts": "bc329947ec9715baee7a89149f2d8ed30b6b4f63963eb637890eb40083c6b01d",
+    "src/data/siteAssessment.ts": "38d160aeaf29fab215f3b93f9ae5b43018e4ac8bbef20441f3ef5f8becea955c",
     "src/data/validation.ts": "04898c99b1e3ee9745471fb82c271884d21ed9dcfe25ce356176f577462844b9",
     "src/data/zones.ts": "246340aec9a4c2af1c5a699b9def76388f01fa45d332e381be16a188c1717482",
-    "src/main.tsx": "beee2ce7eea64313912992c852b3aa173b93a321c73bce2484079d5e94baa386",
+    "src/main.tsx": "bea3e3e94a00e71345658bf5fa2759df6abfb0dc5db3dcd36622e0d67f3bc428",
     "src/styles.css": "4230b5d39844fa758132e8974cf02b3f91dda695d0193d161e1434eb62f53d80",
-    "src/vite-env.d.ts": "424faf9241dd699dda995b367ed36665732da1e6ec1f33b2fd40394488ecac92",
+    "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
     "scripts/build-manifest.mjs": "1b2b4ff99b5c040a34941486048c3b8f2ce587e38d6d1054d7df896f0e7267a2",
     "package.json": "c489e9b4b9a82de15651d445fc52577993b89a59e218d150b4afdc6e317e7540",
     "package-lock.json": "449a2c61336e8d4cb25ea6414bfb0a7d27732e02e2d342937b501cefd525056c",
@@ -27,8 +32,8 @@
     "vite.config.ts": "5e7f7055310aabd506be72e8da359ef58f185554f3c7fd4f38ac390e9706a9b3"
   },
   "dist_sha256": {
+    "dist/assets/index-B7-KfI9x.js": "3db604acef84732421f2dbb64d84fc8d465077cb0905a34a6e1290aa2a9375d0",
     "dist/assets/index-BtSLriLN.css": "b208a3c78aeb035364059354a2457484b334d3f62309e78b9b5d78e44acef04b",
-    "dist/assets/index-DmfIfSQn.js": "194b970c97fce254f091ac4da2419d62e89879160e83799a22166472139789d0",
-    "dist/index.html": "59fd1f18eb05fe48a7274d41dd163bcffc7253d62ca34f88e9c9fd83c7054af8"
+    "dist/index.html": "b80e768396d6a53c98e8ffc9e0f700e3ed6ebceda79b0614bf8d616a019b6375"
   }
 }
