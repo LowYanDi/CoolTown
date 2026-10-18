@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-10-18T08:21:44.416Z",
+  "generated_at": "2026-10-18T08:48:08.174Z",
   "node": "v24.20.0",
   "build_command": "tsc --noEmit && vite build --configLoader native",
   "source_sha256": {
@@ -9,7 +9,7 @@
     "src/algorithms/readiness.ts": "dc14bea5ad4372de7d778de06e61bca7048ffdb03e5f2c0dd06d97a967fa619e",
     "src/algorithms/summary.ts": "85a6ed589d6494e92c7c2821c81850c60d1f4dcfa0fd57a77957db1e806e95b6",
     "src/assets/case-studies/CoolTown_Real_Zones_2026.geojson": "89e578f069ed0a5582d46a3bdad6d93d2410059a9071a9cd6c540263bff7a1be",
-    "src/components/DatasetControls.tsx": "06a6656b6ba23862d87d717e1f369ed2e5de446fd027cf0e9550d2fa6e2b5937",
+    "src/components/DatasetControls.tsx": "63dcee9523f7d372666518df7025b188e42826c6539c794d9cb38bd11a3fceb6",
     "src/components/EnvironmentalCharts.tsx": "71cd191a8b82c97ce1e49f27697a2bd3c25f78b15333304e9c1fd386639aab75",
     "src/components/FairComparison.tsx": "cfa583d115fc0789ef9a6acb15c322d67a34930d5c07ef0fffc1bbc8361d876c",
     "src/components/GeoJSONMap.tsx": "83b5dae5fdd7a8ef80c3f8564d708c5d43c3f0928bdfa8a8b9c8ecdc219c09a8",
@@ -38,18 +38,19 @@
     "src/main.tsx": "2c0e8bf5ecd38ca83d3b95da67e32946e8451e6d7552289cc46453ca4bcf610b",
     "src/styles.css": "ae40a561df29b111c5dda33179ab8de1376da8f09f3b90a398ab4e1255d3adf4",
     "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
+    "scripts/assets/case-studies/CoolTown_Real_Zones_2026.geojson": "89e578f069ed0a5582d46a3bdad6d93d2410059a9071a9cd6c540263bff7a1be",
     "scripts/build-manifest.mjs": "9cfb14aa91341197cba27c06f16cf2b58c74601c16543c6eadf7375e6fe7e9d5",
     "scripts/verify-manifest.mjs": "a4c09edecaa541a06351389c39bb6e87bb17b5ac0000ed97cb0bd864c5749ee2",
-    "package.json": "3de73cc41108e99bcac324e0a188f81c474fa32b4b199071aa9f727f5e3171aa",
-    "package-lock.json": "00ea89342ef5cd748e433dfc645e1f7f3268824ed6856cdf9611122e5fde1eff",
+    "package.json": "c489e9b4b9a82de15651d445fc52577993b89a59e218d150b4afdc6e317e7540",
+    "package-lock.json": "449a2c61336e8d4cb25ea6414bfb0a7d27732e02e2d342937b501cefd525056c",
     "index.html": "8684d38e9c54069925f4aae1ad6bb49b7de0ef7cabd683a907a547ff36f27b54",
     "tsconfig.json": "7890b5f16ef76d9e5b95291677afc7db7da01eb8da7ced5a872d7d01f0f05ae6",
     "vite.config.ts": "5e7f7055310aabd506be72e8da359ef58f185554f3c7fd4f38ac390e9706a9b3"
   },
   "dist_sha256": {
     "dist/assets/CoolTown_Real_Zones_2026-CwYh7fC1.geojson": "89e578f069ed0a5582d46a3bdad6d93d2410059a9071a9cd6c540263bff7a1be",
-    "dist/assets/index--A1S_Dgq.js": "5307d24f2c17535104e49a57a7486eb41afb655db35a87a6035e048f08f52d84",
-    "dist/assets/index-CJUZW3em.css": "508c1583fcab7704d73849676fa12de61e2feafe78b4e2d3a711aebc7f31bf3a",
-    "dist/index.html": "268a827961d3b4eaca1a6f84894849cd8cc549be07f41b3de65e9ca8f47f8563"
+    "dist/assets/index-C42F72qV.css": "0ff56a698414f0f0825348a742ca722fb228d65ffab7ec2de25ae59af251f773",
+    "dist/assets/index-D2nCA-e5.js": "99d1d6cbc71528a721d03e096f6d9f3782c13ac932f51f66af9d10271b591dc1",
+    "dist/index.html": "f72a63052d0c5dadbe74495a9e75bfe52ab2ad520fa9bbe5ae4ed4b647829cad"
   }
 }
