@@ -108,3 +108,7 @@ New temperatureScale.ts, TemperatureLegend.tsx and ZoneNavigator.tsx. GeoJSONMap
 ## Final reliability update
 
 Added optional bundled case-study loading and separate case/custom/demo state. Added a quality-filtered, interpolated 80th-percentile initial hotspot threshold for real data. Manual thresholds persist across map interactions and dataset switching. New imports reset only their own threshold and assessments. Original observations and GeoJSON remain separate from site assumptions. Added four test groups (63 total) and automatic manifest/hash/inventory verification. No new dependencies or visual redesign. See INSTALL-CHANGES.md for the exact replacement files.
+
+## Hackathon finalist readiness
+
+GIS overlay state is now derived from the selected layer. Shared colour/legend functions replace ambiguous NDVI and land-cover palettes. The original case-study asset remains at src/assets/case-studies and is packaged unchanged. Added deterministic opt-in example assessments with reset, separate common-resource future comparison, true cost-sensitivity reruns, missing-input explanations, a classified evidence register and per-proposal pilot checklists. No new dependencies. Existing candidate cards retain formulas, conditions, cost, components and verification requirements. Export schema is now 4. Read FIVE-MINUTE-DEMO.md for the demonstration flow.

@@ -152,7 +152,7 @@ export type Scenario = {
     options: boolean[];
     carportArea?: number;
 };
-export const optionNames = ['Tree planting & green corridors', 'Rooftop solar readiness', 'Solar carports', 'Cool-roof treatments', 'Public shade structures', 'Rain gardens'];
+export const optionNames = ['Tree planting & green corridors', 'Rooftop Solar Installation', 'Solar carports', 'Cool-roof treatments', 'Public shade structures', 'Rain gardens'];
 export function validateScenario(s: Scenario): string[] {
     const errors: string[] = [];
     if (inRange(s.area, .01, 10000) === null)

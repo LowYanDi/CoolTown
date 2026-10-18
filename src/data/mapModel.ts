@@ -1,3 +1,4 @@
+import { INSUFFICIENT,landCategory,landPalette,ndviColor,stageColors,hotspotColors } from './layerColors.ts';
 import { temperatureColor, type TemperatureScale } from './temperatureScale.ts';
 import type { Zone } from './loader.ts';
 import type { Candidate } from '../algorithms/planning.ts';
@@ -14,12 +15,12 @@ export function candidateStage(z:Zone,candidates:Pick<Candidate,'zone'|'prelimin
 }
 export function polygonStyle(z:Zone,selected:string,layer:string,threshold:number,minimum:number,opacity:number,stage:string,visible=true,scale:TemperatureScale|null=null){
  const good=environmentalQuality(z,minimum).usable;
- let fill='#c9cecb';
+ let fill=INSUFFICIENT;
  if(good){
-  if(layer==='Land cover')fill=/vegetation|forest|park/i.test(z.landcover)?'#80b796':/water/i.test(z.landcover)?'#b8d4d4':'#d2c9ae';
-  else if(layer==='Vegetation / NDVI')fill=`hsl(151 28% ${83-clamp01(z.ndvi!)*45}%)`;
-  else if(layer==='Heat hotspots')fill=z.lst_c!>=threshold?'#de956e':'#cad8ca';
-  else if(layer==='Intervention zones')fill=stage.startsWith('Independent')?'#22734d':stage.startsWith('Preliminary')?'#d7a24c':stage.startsWith('Environmental')?'#91b7d2':'#d8dfd1';
+  if(layer==='Land cover')fill=landPalette[landCategory(z.landcover)];
+  else if(layer==='Vegetation / NDVI')fill=ndviColor(z.ndvi);
+  else if(layer==='Heat hotspots')fill=z.lst_c!>=threshold?hotspotColors.hot:hotspotColors.below;
+  else if(layer==='Intervention zones')fill=stage.startsWith('Independent')?stageColors.verified:stage.startsWith('Preliminary')?stageColors.preliminary:stage.startsWith('Environmental')?stageColors.opportunity:stageColors.none;
   else fill=temperatureColor(z.lst_c,scale);
  }
  return {color:z.zone_id===selected?'#102f28':!good?'#68706b':'#ffffff',weight:z.zone_id===selected?4:2,dashArray:good?undefined:'5 4',fillColor:fill,fillOpacity:visible?clamp01(opacity):0};

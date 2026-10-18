@@ -1,3 +1,5 @@
+import { LayerLegend } from './LayerLegend';
+import { overlayVisible } from '../data/layerColors';
 import { ZoneNavigator } from './ZoneNavigator';
 import { TemperatureLegend } from './TemperatureLegend';
 import { temperatureScale } from '../data/temperatureScale';
@@ -16,7 +18,8 @@ const OSM_ATTR='&copy; <a href="https://www.openstreetmap.org/copyright" target=
 export function GeoJSONMap({records,selected,onSelect,minimumCoverage=DEFAULT_MIN_COVERAGE,layer='Surface temperature',threshold=36.5,candidates=EMPTY,opportunities=NO_OPPORTUNITIES,onLayerChange}:{records:Zone[];selected:string;onSelect:(id:string)=>void;minimumCoverage?:number;layer?:string;threshold?:number;candidates?:Candidate[];opportunities?:Opportunity[];onLayerChange?:(layer:string)=>void}){
  const container=useRef<HTMLDivElement>(null),mapRef=useRef<L.Map|null>(null),polygons=useRef<L.GeoJSON|null>(null),callback=useRef(onSelect);
  callback.current=onSelect;
- const [basemap,setBasemap]=useState<Basemap>('street'),[opacity,setOpacity]=useState(.5),[overlay,setOverlay]=useState(true),[error,setError]=useState(''),[tileError,setTileError]=useState('');
+ const [basemap,setBasemap]=useState<Basemap>('street'),[opacity,setOpacity]=useState(.5),[error,setError]=useState(''),[tileError,setTileError]=useState('');
+ const overlay=overlayVisible(layer);
  const scale=useMemo(()=>temperatureScale(records,minimumCoverage),[records,minimumCoverage]);
  const previousSelection=useRef({records,selected});
  const zoomZone=(id:string)=>{const z=records.find(z=>z.zone_id===id);const bounds=z?geographicBounds([z]):null;if(bounds)mapRef.current?.fitBounds(bounds,{padding:[35,35],maxZoom:18,animate:false});};
@@ -78,14 +81,14 @@ export function GeoJSONMap({records,selected,onSelect,minimumCoverage=DEFAULT_MI
  },[records,selected,layer,threshold,minimumCoverage,opacity,overlay,candidates,opportunities,scale]);
  return <div>
   {!records.length?<div className="notice">Observed data has not yet been imported. Choose a local GeoJSON file.</div>:<>
-   <div className="form-grid"><label className="field"><span>Basemap</span><select aria-label="Basemap" value={basemap} onChange={e=>setBasemap(e.target.value as Basemap)}><option value="street">Street map</option><option value="satellite">Satellite imagery</option><option value="none">No basemap (offline)</option></select></label><label className="field"><span>Overlay opacity · {Math.round(opacity*100)}%</span><input aria-label="Overlay opacity" type="range" min="0" max="100" value={opacity*100} onChange={e=>setOpacity(+e.target.value/100)}/></label></div>
-   <label><input type="checkbox" checked={overlay} onChange={e=>setOverlay(e.target.checked)}/> Show environmental overlay</label>
-   {onLayerChange&&<div className="layer-tabs"><button onClick={()=>{setBasemap('satellite');setOverlay(false);}}>Satellite only</button><button onClick={()=>{setBasemap('satellite');setOverlay(true);onLayerChange('Surface temperature');}}>Satellite + Heat</button><button onClick={()=>{setBasemap('satellite');setOverlay(true);onLayerChange('Vegetation / NDVI');}}>Satellite + Vegetation</button></div>}
+   <div className="form-grid"><label className="field"><span>Basemap</span><select aria-label="Basemap" value={basemap} onChange={e=>setBasemap(e.target.value as Basemap)}><option value="street">Street map</option><option value="satellite">Satellite imagery</option><option value="none">No basemap (offline)</option></select></label><label className="field"><span>Overlay opacity · {Math.round(opacity*100)}%</span><input aria-label="Overlay opacity" type="range" disabled={!overlay} min="0" max="100" value={opacity*100} onChange={e=>setOpacity(+e.target.value/100)}/></label></div>
+   <p className="source-note">Environmental overlay: {overlay?layer:"hidden — Satellite only"}</p>
+   {onLayerChange&&<div className="layer-tabs" role="group" aria-label="Map layers">{['Surface temperature','Vegetation / NDVI','Land cover','Heat hotspots','Intervention zones'].map(name=><button key={name} className={layer===name?'selected':''} aria-pressed={layer===name} onClick={()=>onLayerChange(name)}>{name}</button>)}<button className={!overlay?'selected':''} aria-pressed={!overlay} onClick={()=>{setBasemap('satellite');onLayerChange('Satellite only');}}>Satellite only</button></div>}
    <p className="source-note">Basemap imagery is geographic context, not real-time thermal data or the same-date satellite observation. Tile providers receive map-view requests; imported files remain local. Gray / dashed polygons: Insufficient Data; outlines and selection remain visible at 0% opacity.</p>
   </>}
   {tileError&&<p role="status" className="notice">{tileError}</p>}{error&&<p role="alert" className="error">{error}</p>}
   <div ref={container} aria-label="Real GIS study area map" style={{height:480,position:'relative',zIndex:0,display:records.length?'block':'none'}}/>
-  {layer==='Intervention zones'&&<p className="source-note">Blue: environmental opportunity · Amber: preliminary assumed candidate · Green: independent verification declared (not authenticated) · Pale: no candidate or verification evidence unavailable. Gray: Insufficient Data.</p>}
+  <LayerLegend layer={layer} threshold={threshold}/>
   {records.length>0&&<><button type="button" className="text-link" onClick={()=>{const bounds=geographicBounds(records);if(bounds)mapRef.current?.fitBounds(bounds,{padding:[20,20],maxZoom:17,animate:false});}}>Fit study area</button>{layer==='Surface temperature'&&<TemperatureLegend records={records} minimum={minimumCoverage}/>}<ZoneNavigator records={records} selected={selected} minimum={minimumCoverage} onSelect={id=>{onSelect(id);zoomZone(id);}}/></>}
  </div>;
 }

@@ -1,20 +1,26 @@
-CoolTown Planner — final reliability validation
+CoolTown Planner — hackathon readiness validation
 
-63 algorithm test groups passed. TypeScript checks and Vite production build passed.
-The build automatically regenerated BUILD-MANIFEST.json and verified all 41 recorded source/production hashes and all four production files, including the emitted GeoJSON.
+Executed: 73 algorithm test groups passed; TypeScript no-emit check passed; production Vite build passed. No new dependencies.
+A clean build was run after moving the previous dist out of the project. Subsequent final rendering correction was rebuilt with Vite's output cleanup. Manifest verification checks all 46 source/production hashes and all four current production files.
 
-Actual supplied dataset: CoolTown_Real_Zones_2026.geojson
-20 polygons; 11 quality-valid at the illustrative 80% minimum; 9 insufficient.
-SHA256: 89e578f069ed0a5582d46a3bdad6d93d2410059a9071a9cd6c540263bff7a1be
-The source asset matches the supplied file byte-for-byte.
-Initial interpolated quality-valid 80th percentile: 44.78442955698896 C.
-Inclusive hotspot count: 3. Invalid/insufficient observations are excluded.
+Dataset integrity: source and supplied Downloads GeoJSON have identical SHA256:
+89e578f069ed0a5582d46a3bdad6d93d2410059a9071a9cd6c540263bff7a1be
+Correct source path: src/assets/case-studies/CoolTown_Real_Zones_2026.geojson
+20 polygons, 11 quality-valid at the illustrative 80% minimum, 9 insufficient.
+Default interpolated 80th-percentile LST threshold 44.78442955698896 C, 3 relative hotspots.
 
-Additional tests cover missing/invalid bundled files, empty/constant/single/negative temperature sets, observation preservation, no candidates without site inputs, and explicitly assumed candidates respecting budget. Existing coverage, geometry, provenance, solar independence, exclusivity, objectives, scenario, export, colour and navigator tests remain.
+New automated checks: layer visibility, NDVI reference stops and invalid values, all land-cover categories/aliases, hotspot states, intervention evidence states, deterministic guided assumptions without observation mutation, equal-resource projection without original input mutation, true cost-sensitivity optimiser reruns including exclusions/cent rounding, pilot evidence requirements, and schema-4 export. Existing 63 groups preserved except export version expectation updated from 3 to 4.
 
-Production browser checks: real case opens by default, 11/20 valid and 3 hotspots. Manual threshold 44 persists across demo/case switching. A separately assumed potentially suitable 100 m2 walkway with cost acknowledgement yields a clearly unverified preliminary shade-tree candidate costing RM1,800. Future scenario comparison/optimisation and JSON export work. Export preserves the actual original GeoJSON, separate assessment, both scenarios, manual threshold and calculated percentile reference.
+Browser checks executed locally:
+- Default case study, 11/20 valid and 9 insufficient, 0 candidates before consent.
+- Guided example creates 4 preliminary candidates from 3 quality-valid zones.
+- Base plan at RM150,000: trees + carports, RM140,040, 75.68 heuristic points.
+- +10% cost rerun: trees + cool roofs, RM16,280, 65.36 points.
+- Reset Example restores RM50,000 and no candidates.
+- Satellite only disables overlay/opacity; selecting NDVI or Land cover restores overlay while retaining satellite selection. Legends show numeric NDVI and all categorical entries.
+- Production real satellite map loaded with attribution and preliminary polygons; no new provider API was introduced.
+- Equal comparison edited to 80 ha / RM200,000, independent scenario B restored to 100 ha / RM6,000,000.
+- Pilot verified claim with empty evidence remains 0/8 supported, warning shown.
+- Export original_geojson deep-equals supplied file, separate assumptions/candidates/sensitivity/evidence present, unmeasured outcomes null.
 
-This validates software behaviour and preservation, not satellite accuracy, cadastral topology, engineering suitability or scientific thermal danger. Historical composite metadata is supplied by the file. Production-domain MapTiler key restrictions require account-owner configuration; no private credentials belong in this frontend. The production build has a non-fatal large-JavaScript-chunk advisory.
-
-Reproduce: npm.cmd test; npm.cmd run build.
-Verify without rebuilding: node scripts/verify-manifest.mjs
+Limits: satellite/provider availability and domain restrictions are account-dependent; no external source authenticity, engineering feasibility or achieved environmental impact is certified. The existing large JavaScript chunk advisory is non-fatal. No deployment or publishing was performed.

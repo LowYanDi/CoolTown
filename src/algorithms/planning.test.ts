@@ -1,3 +1,5 @@
+import { ndviColor,ndviStops,landCategory,landPalette,overlayVisible,hotspotColors,stageColors } from '../data/layerColors.ts';
+import { exampleAssessments,costSensitivity,comparisonScenarios,futureComparison,pilotReadiness,pilotItems,screeningReasons } from './readiness.ts';
 import {readFileSync,existsSync} from 'node:fs';
 import {relativeHotspotThreshold,initialHotspotThreshold,loadCaseStudy} from '../data/caseStudyModel.ts';
 import {temperatureScale,temperatureColor,filterZones,INSUFFICIENT_COLOR} from '../data/temperatureScale.ts';
@@ -75,7 +77,7 @@ test('export-ready data contain finite scores and nullable missing observations'
 test('actual JSON export includes objectives, original and optimised scenarios', () => {
     const input = { budget: 100000, excluded: [], threshold: 36.5, objectives: energy, scenarios: [scenario, { ...scenario, land: [0, 0, 0, 0, 0] }], solarInputs: { area: 200, density: .16, yield: 1300, factor: .85, cost: 3200 } };
     const result = JSON.parse(JSON.stringify(buildPlanningSummary(input, '2026-10-16T00:00:00Z')));
-    assert.equal(result.schema_version, 3);
+    assert.equal(result.schema_version, 4);
     assert.equal(result.objectives.normalised.energy, 1);
     assert.ok(result.existing_township.cost <= 100000);
     assert.ok(result.future_scenarios[0].budget_constrained.plan.cost <= scenario.budget);
@@ -368,6 +370,46 @@ test('provided Malaysian case study retains original observations and screening 
  for(const z of d.zones){const p=raw.features.find((f:any)=>f.properties.zone_id===z.zone_id).properties;for(const k of ['lst_c','ndvi','data_coverage','observation_start','observation_end','observation_date','data_source'] as const)assert.equal(z[k],p[k]);assert.equal(z.site_verified,false);assert.equal(z.planting_area,0);assert.equal(z.estimated_usable_area,0);}
  const q=relativeHotspotThreshold(d.zones)!;assert.ok(q>36.5);const hotspots=d.zones.filter(z=>environmentalQuality(z).usable&&z.lst_c!>=q);assert.ok(hotspots.length>0&&hotspots.length<11);assert.equal(recommend(q,DEFAULT_OBJECTIVES,d.zones).length,0);
  const selected=d.zones.find(z=>environmentalQuality(z).usable&&z.lst_c!>=q&&z.ndvi!<.4&&!/water/i.test(z.landcover));assert.ok(selected);const a=readyAssessment();const cs=recommend(q,DEFAULT_OBJECTIVES,d.zones,80,{[selected!.zone_id]:a});assert.ok(cs.length>0);assert.ok(cs.every(c=>c.preliminary));assert.ok(optimise(cs,5000).cost<=5000);assert.deepEqual(d.originalGeoJSON,raw);
+});
+test('layer visibility follows every environmental layer after satellite only',()=>{
+ assert.equal(overlayVisible('Satellite only'),false);for(const layer of ['Surface temperature','Vegetation / NDVI','Land cover','Heat hotspots','Intervention zones'])assert.equal(overlayVisible(layer),true);
+ const z=zones[0],before=JSON.stringify(z);assert.equal(polygonStyle(z,z.zone_id,'Surface temperature',36.5,80,.6,'',false).fillOpacity,0);assert.equal(polygonStyle(z,z.zone_id,'Surface temperature',36.5,80,.6,'',true).fillOpacity,.6);assert.equal(JSON.stringify(z),before);
+});
+test('NDVI numeric stops match map and invalid inputs remain gray',()=>{
+ for(const stop of ndviStops){assert.equal(ndviColor(stop.value),stop.color);assert.equal(polygonStyle({...zones[0],ndvi:stop.value},'','Vegetation / NDVI',36,80,.6,'').fillColor,stop.color);}
+ for(const n of [null,NaN,Infinity,1.1,-1.1])assert.equal(ndviColor(n),INSUFFICIENT_COLOR);assert.notEqual(ndviColor(.1),ndviColor(.5));
+});
+test('historical land categories map distinctly including tree cover and ESA variants',()=>{
+ for(const [name,color]of Object.entries(landPalette))assert.equal(polygonStyle({...zones[0],landcover:name},'','Land cover',36,80,.5,'').fillColor,color);
+ assert.equal(landCategory('Herbaceous wetland'),'Wetland');assert.equal(landCategory('Permanent water bodies'),'Water');assert.equal(landCategory('Bare / sparse vegetation'),'Bare land');assert.equal(landCategory('Tree cover'),'Tree cover');assert.equal(landCategory('unclassified'),'Other / Unknown');
+});
+test('hotspots distinguish threshold equality below and insufficient',()=>{
+ const z={...zones[0],lst_c:40};assert.equal(polygonStyle(z,'','Heat hotspots',40,80,.5,'').fillColor,hotspotColors.hot);assert.equal(polygonStyle(z,'','Heat hotspots',41,80,.5,'').fillColor,hotspotColors.below);assert.equal(polygonStyle({...z,data_coverage:79},'','Heat hotspots',39,80,.5,'').fillColor,INSUFFICIENT_COLOR);
+});
+test('intervention legend states match styles without inventing verification',()=>{
+ const z=zones[0];for(const [stage,color]of [['Environmental opportunity',stageColors.opportunity],['Preliminary',stageColors.preliminary],['Independent verification declared',stageColors.verified],['No screened candidates',stageColors.none]])assert.equal(polygonStyle(z,'','Intervention zones',36,80,.6,stage).fillColor,color);
+ assert.equal(polygonStyle({...z,data_coverage:2},'','Intervention zones',36,80,.6,'Independent').fillColor,INSUFFICIENT_COLOR);
+});
+test('guided real example is deterministic separate and yields preliminary candidates',()=>{
+ const d=loadCaseStudy(readFileSync(new URL('../assets/case-studies/CoolTown_Real_Zones_2026.geojson',import.meta.url),'utf8')).dataset!;const before=JSON.stringify(d),a=exampleAssessments(d.zones,80);assert.equal(Object.keys(a).length,3);assert.deepEqual(a,exampleAssessments([...d.zones].reverse(),80));
+ const cs=recommend(relativeHotspotThreshold(d.zones)!,DEFAULT_OBJECTIVES,d.zones,80,a);assert.ok(cs.length>=3);assert.ok(cs.every(c=>c.preliminary));assert.equal(JSON.stringify(d),before);assert.equal(recommend(44,DEFAULT_OBJECTIVES,d.zones,80,{}).length,0);assert.deepEqual(exampleAssessments(d.zones.map(z=>({...z,data_coverage:1})),80),{});
+ const plan=optimise(cs,150000);assert.ok(plan.cost<=150000);const groups=plan.selected.flatMap(c=>c.group?[c.group]:[]);assert.equal(groups.length,new Set(groups).size);
+});
+test('equal resource comparison projects constraints and restores independent originals',()=>{
+ const originals=[scenario,{...scenario,area:200,budget:900000,land:[40,20,20,15,5]}],before=JSON.stringify(originals),settings={equal:true,area:80,budget:120000};const view=comparisonScenarios(originals,settings);assert.ok(view.every(s=>s.area===80&&s.budget===120000));assert.deepEqual(view[1].land,originals[1].land);view[0].land[0]=99;assert.equal(JSON.stringify(originals),before);assert.deepEqual(comparisonScenarios(originals,{...settings,equal:false}),originals);
+ const results=futureComparison(originals,settings,DEFAULT_OBJECTIVES);assert.ok(results.every(r=>r.optimised.valid&&r.optimised.plan.cost<=120000));
+});
+test('cost sensitivity truly reoptimises and preserves base candidate costs',()=>{
+ const cs=[candidate('a',60,90,'roof'),candidate('b',50,80,'roof'),candidate('c',40,50)],before=JSON.stringify(cs),rows=costSensitivity(cs,100);assert.deepEqual(rows[0].plan.selected.map(c=>c.id),['a','c']);assert.notDeepEqual(rows[1].plan.selected.map(c=>c.id),['a','c']);assert.equal(rows[1].preferredFeasible,false);assert.equal(JSON.stringify(cs),before);
+ for(const r of rows){assert.ok(r.plan.cost<=100);const oracle=optimise(cs.map(c=>({...c,cost:Math.ceil(c.cost*100*(100+r.percent)/100)/100})),100);assert.deepEqual(r.plan.selected.map(c=>c.id),oracle.selected.map(c=>c.id));}
+ assert.ok(costSensitivity(cs,100,['a']).every(r=>r.plan.selected.every(c=>c.id!=='a')));assert.equal(costSensitivity([candidate('fraction',.301,50)],.3)[0].plan.selected.length,0);
+});
+test('pilot evidence is required and does not confer engineering approval',()=>{
+ const noEvidence=Object.fromEntries(pilotItems.map(i=>[i,{status:'verified' as const,evidence:'  '}]));assert.equal(pilotReadiness(noEvidence).supported,0);assert.equal(pilotReadiness(noEvidence).complete,false);
+ const declared=Object.fromEntries(pilotItems.map(i=>[i,{status:'verified' as const,evidence:'Test reference only'}]));assert.equal(pilotReadiness(declared).complete,true);assert.match(pilotReadiness(declared).notice,/not authenticated/);declared[pilotItems[0]].evidence='';assert.equal(pilotReadiness(declared).complete,false);
+});
+test('summary exports resource comparison sensitivity and no achieved outcomes',()=>{
+ const result=buildPlanningSummary({budget:5000,excluded:[],threshold:36.5,objectives:DEFAULT_OBJECTIVES,scenarios:[scenario],comparison:{equal:true,area:80,budget:10000},solarInputs:{area:200,density:.16,yield:1300,factor:.85,cost:3200}});assert.equal(result.cost_sensitivity.length,3);assert.equal(result.future_comparison[0].scenario.budget,10000);assert.equal(result.future_scenarios[0].budget,scenario.budget);assert.equal(result.unverified_outcomes.temperature_reduction,null);assert.ok(screeningReasons({...zones[0],data_coverage:2},undefined,80).some(r=>r.includes('Insufficient')));
 });
 console.log(`${passed} test groups passed.`);
 

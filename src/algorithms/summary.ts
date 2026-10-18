@@ -1,3 +1,4 @@
+import { costSensitivity,futureComparison,pilotReadiness,type PilotChecks,type ComparisonSettings } from './readiness.ts';
 import { relativeHotspotThreshold } from '../data/caseStudyModel.ts';
 import { type SiteAssessments } from '../data/siteAssessment.ts';
 import { datasetProvenance } from '../data/provenance.ts';
@@ -9,6 +10,7 @@ import { COVERAGE_POLICY, coverageThreshold, environmentalQuality } from '../dat
 import { zones, source, demoDataset } from '../data/zones.ts';
 import { recommend, planningResult, optimiseScenario, scenarioMetrics, normaliseObjectives, solar, SCORE_METHOD, SCENARIO_ASSUMPTIONS, type Objectives, type Scenario, type Solar } from './planning.ts';
 export type SummaryInput = {
+    comparison?:ComparisonSettings; pilotChecks?:PilotChecks; exampleZoneIds?:string[];
     siteAssessments?: SiteAssessments; selectedZoneIds?: string[]; budget: number; dataset?: PlanningDataset;
     excluded: string[];
     threshold: number; minimumCoverage?: number;
@@ -22,7 +24,7 @@ export function buildPlanningSummary(input: SummaryInput, exportedAt = new Date(
     const candidates = recommend(input.threshold, input.objectives, zones, input.minimumCoverage, input.siteAssessments);
     const plan = planningResult(candidates, input.budget, input.excluded);
     return {
-        schema_version: 3,
+        schema_version: 4,
         application: 'CoolTown Planner',
         exported_at: exportedAt,
         data_source: { id: dataset.id, title: dataset.title, mode: dataset.mode },
@@ -45,6 +47,12 @@ export function buildPlanningSummary(input: SummaryInput, exportedAt = new Date(
             const m = scenarioMetrics(s, input.objectives);
             return { ...s, evidence: 'Synthetic planning scenario with assumed costs and solar resources; not derived from imported boundaries.', valid: m.valid, errors: m.errors, metrics: m.valid ? m : null, budget_constrained: optimiseScenario(s, input.objectives) };
         }),
+        cost_sensitivity: costSensitivity(candidates,input.budget,input.excluded),
+        comparison_constraints: input.comparison??{equal:false,area:100,budget:1000000},
+        future_comparison: futureComparison(input.scenarios,input.comparison??{equal:false,area:100,budget:1000000},input.objectives),
+        guided_example: {zone_ids:input.exampleZoneIds??[],notice:'Demonstration assumptions, not verified site data.'},
+        pilot_checklists: Object.fromEntries(candidates.map(c=>[c.id,pilotReadiness(input.pilotChecks?.[c.id])])),
+        unverified_outcomes: {temperature_reduction:null,biodiversity_improvement:null,co2_reduction:null,thermal_comfort_improvement:null,notice:'No achieved environmental outcomes measured.'},
         solar_calculator: { inputs: input.solarInputs, ...solar(input.solarInputs), status: 'Independent calculator using assumed inputs; does not overwrite zone solar assumptions.' }
     };
 }
