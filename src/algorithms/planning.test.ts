@@ -1,3 +1,4 @@
+import {bindPilotChecks,currentPilotChecks,clearPilotZones} from './readiness.ts';
 import { ndviColor,ndviStops,landCategory,landPalette,overlayVisible,hotspotColors,stageColors } from '../data/layerColors.ts';
 import { exampleAssessments,costSensitivity,comparisonScenarios,futureComparison,pilotReadiness,pilotItems,screeningReasons } from './readiness.ts';
 import {readFileSync,existsSync} from 'node:fs';
@@ -410,6 +411,14 @@ test('pilot evidence is required and does not confer engineering approval',()=>{
 });
 test('summary exports resource comparison sensitivity and no achieved outcomes',()=>{
  const result=buildPlanningSummary({budget:5000,excluded:[],threshold:36.5,objectives:DEFAULT_OBJECTIVES,scenarios:[scenario],comparison:{equal:true,area:80,budget:10000},solarInputs:{area:200,density:.16,yield:1300,factor:.85,cost:3200}});assert.equal(result.cost_sensitivity.length,3);assert.equal(result.future_comparison[0].scenario.budget,10000);assert.equal(result.future_scenarios[0].budget,scenario.budget);assert.equal(result.unverified_outcomes.temperature_reduction,null);assert.ok(screeningReasons({...zones[0],data_coverage:2},undefined,80).some(r=>r.includes('Insufficient')));
+});
+test('pilot evidence is bound to the assessed proposal and not objective weights',()=>{
+ const original={...candidate('same-id',1800,50),inputs:'100 m² planting',green:100};const checks={[original.id]:{[pilotItems[1]]:{status:'verified' as const,evidence:'QA reference for 100 m²'}}};const stored=bindPilotChecks([original],checks);
+ assert.equal(pilotReadiness(currentPilotChecks([original],stored)[original.id]).supported,1);
+ assert.deepEqual(currentPilotChecks([{...original,inputs:'200 m² planting',cost:3600,green:200}],stored),{});
+ assert.equal(pilotReadiness(currentPilotChecks([{...original,score:99}],stored)[original.id]).supported,1);
+ assert.deepEqual(currentPilotChecks([],stored),{});assert.deepEqual(clearPilotZones(stored,[original.zone]),{});assert.deepEqual(clearPilotZones(stored,['unrelated']),stored);
+ assert.equal(stored[original.id].checks[pilotItems[1]].evidence,'QA reference for 100 m²');
 });
 console.log(`${passed} test groups passed.`);
 

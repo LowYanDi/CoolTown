@@ -5,6 +5,7 @@ import type { Candidate } from '../algorithms/planning.ts';
 import type { Opportunity } from '../algorithms/opportunities.ts';
 import { environmentalQuality,clamp01 } from './validation.ts';
 export type Basemap='street'|'satellite'|'none';
+export type MapPreferences={basemap:Basemap;opacity:number};
 export function resolveBasemap(mode:Basemap,key:string){return mode==='satellite'&&!key.trim()?'street':mode;}
 export function candidateStage(z:Zone,candidates:Pick<Candidate,'zone'|'preliminary'>[],opportunities:Pick<Opportunity,'zone'>[]){
  const cs=candidates.filter(c=>c.zone===z.zone_id);

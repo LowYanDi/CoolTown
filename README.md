@@ -57,7 +57,7 @@ Properties include zone_id, zone_name, lst_c, ndvi, landcover, observation_date 
 
 ## Validation and export
 
-73 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
+74 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
 
 ## Environmental charts and two-stage planning update
 
@@ -121,3 +121,7 @@ Cost sensitivity runs exact optimisation three times at base, +10% and +20% cost
 Impact & Evidence distinguishes observed/synthetic baseline, calculated indicators, assumed estimates and unmeasured outcomes. Pilot checklist entries are scoped to the active dataset and candidate. Verified and not-applicable claims need an evidence reference or reason to count; entries are user declarations and do not change screening or independently verify construction. Session refresh clears checklist/assumption state. A replacement custom import clears that dataset's checklist. Review evidence again whenever a proposal changes.
 
 Export schema 4 preserves the earlier fields and adds cost_sensitivity, comparison_constraints, future_comparison, guided_example, pilot_checklists and explicit null unverified environmental outcomes. The original future_scenarios retain saved independent inputs; future_comparison contains the active comparison projection.
+
+## Final end-to-end reliability patch
+
+Pilot evidence is bound to the proposal inputs it assessed. If quantities, site assumptions, costs or verification context change, earlier evidence no longer counts for the revised candidate. Objective-weight changes alone do not invalidate it. Guided-example reset restores prior evidence. Basemap/opacity preferences now persist across page transitions. See FINAL-QA-REPORT.md for actual live and local browser results, remaining limits and deployment follow-up.

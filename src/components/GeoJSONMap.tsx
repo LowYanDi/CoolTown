@@ -12,13 +12,16 @@ import { environmentalQuality, DEFAULT_MIN_COVERAGE } from '../data/validation';
 import { priority, type Candidate } from '../algorithms/planning';
 import type { Opportunity } from '../algorithms/opportunities';
 import { observationPeriod,landcoverReference } from '../data/provenance';
-import { candidateStage,polygonStyle,geographicBounds,resolveBasemap,type Basemap } from '../data/mapModel';
+import { candidateStage,polygonStyle,geographicBounds,resolveBasemap,type Basemap,type MapPreferences } from '../data/mapModel';
 const EMPTY:Candidate[]=[]; const NO_OPPORTUNITIES:Opportunity[]=[];
 const OSM_ATTR='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>';
-export function GeoJSONMap({records,selected,onSelect,minimumCoverage=DEFAULT_MIN_COVERAGE,layer='Surface temperature',threshold=36.5,candidates=EMPTY,opportunities=NO_OPPORTUNITIES,onLayerChange}:{records:Zone[];selected:string;onSelect:(id:string)=>void;minimumCoverage?:number;layer?:string;threshold?:number;candidates?:Candidate[];opportunities?:Opportunity[];onLayerChange?:(layer:string)=>void}){
+export function GeoJSONMap({records,selected,onSelect,minimumCoverage=DEFAULT_MIN_COVERAGE,layer='Surface temperature',threshold=36.5,candidates=EMPTY,opportunities=NO_OPPORTUNITIES,onLayerChange,view,onViewChange}:{view:MapPreferences;onViewChange:(view:MapPreferences)=>void;records:Zone[];selected:string;onSelect:(id:string)=>void;minimumCoverage?:number;layer?:string;threshold?:number;candidates?:Candidate[];opportunities?:Opportunity[];onLayerChange?:(layer:string)=>void}){
  const container=useRef<HTMLDivElement>(null),mapRef=useRef<L.Map|null>(null),polygons=useRef<L.GeoJSON|null>(null),callback=useRef(onSelect);
  callback.current=onSelect;
- const [basemap,setBasemap]=useState<Basemap>('street'),[opacity,setOpacity]=useState(.5),[error,setError]=useState(''),[tileError,setTileError]=useState('');
+ const {basemap,opacity}=view;
+ const setBasemap=(basemap:Basemap)=>onViewChange({...view,basemap});
+ const setOpacity=(opacity:number)=>onViewChange({...view,opacity});
+ const [error,setError]=useState(''),[tileError,setTileError]=useState('');
  const overlay=overlayVisible(layer);
  const scale=useMemo(()=>temperatureScale(records,minimumCoverage),[records,minimumCoverage]);
  const previousSelection=useRef({records,selected});

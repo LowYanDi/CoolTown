@@ -112,3 +112,7 @@ Added optional bundled case-study loading and separate case/custom/demo state. A
 ## Hackathon finalist readiness
 
 GIS overlay state is now derived from the selected layer. Shared colour/legend functions replace ambiguous NDVI and land-cover palettes. The original case-study asset remains at src/assets/case-studies and is packaged unchanged. Added deterministic opt-in example assessments with reset, separate common-resource future comparison, true cost-sensitivity reruns, missing-input explanations, a classified evidence register and per-proposal pilot checklists. No new dependencies. Existing candidate cards retain formulas, conditions, cost, components and verification requirements. Export schema is now 4. Read FIVE-MINUTE-DEMO.md for the demonstration flow.
+
+## Final QA fixes
+
+Two reproduced bugs fixed: stale pilot evidence on revised site proposals, and satellite-only/basemap mismatch after navigating away and back. No new dependencies or major features. Explicitly label proposed hypothetical facilities. Reuse the sensitivity base optimiser result. 74 test groups pass; see FINAL-QA-REPORT.md.
