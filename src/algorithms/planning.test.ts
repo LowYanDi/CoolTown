@@ -1,3 +1,5 @@
+import {readFileSync,existsSync} from 'node:fs';
+import {relativeHotspotThreshold,initialHotspotThreshold,loadCaseStudy} from '../data/caseStudyModel.ts';
 import {temperatureScale,temperatureColor,filterZones,INSUFFICIENT_COLOR} from '../data/temperatureScale.ts';
 import {datasetProvenance,observationPeriod,firstQualityZone} from '../data/provenance.ts';
 import {geographicBounds,polygonStyle,candidateStage,resolveBasemap} from '../data/mapModel.ts';
@@ -344,7 +346,31 @@ test('navigator searches IDs and names without removing insufficient zones',()=>
 test('initial quality selection retains insufficient fallback and does not change records',()=>{
  const records=[{...zones[0],data_coverage:79},{...zones[1],data_coverage:80}];const before=JSON.stringify(records);assert.equal(firstQualityZone(records,80),records[1].zone_id);assert.equal(firstQualityZone(records,90),records[0].zone_id);assert.equal(firstQualityZone([]),'');assert.equal(JSON.stringify(records),before);
 });
+
+test('relative hotspot percentile uses only quality-valid temperatures without mutation',()=>{
+ const records=[10,20,30,40,50].map(lst_c=>({...zones[0],lst_c}));records.push({...zones[0],lst_c:99,data_coverage:79});const before=JSON.stringify(records);
+ assert.equal(relativeHotspotThreshold(records),42);assert.equal(JSON.stringify(records),before);assert.equal(relativeHotspotThreshold(records,101),42);
+});
+test('relative hotspot handles empty constant single and negative samples',()=>{
+ assert.equal(relativeHotspotThreshold([]),null);assert.equal(relativeHotspotThreshold([{...zones[0],lst_c:null}]),null);assert.equal(relativeHotspotThreshold([{...zones[0],lst_c:47.123}]),47.123);
+ assert.equal(relativeHotspotThreshold([{...zones[0],lst_c:42},{...zones[1],lst_c:42}]),42);assert.equal(relativeHotspotThreshold([{...zones[0],lst_c:-10},{...zones[1],lst_c:0}]),-2);
+ assert.equal(initialHotspotThreshold(null),36.5);assert.equal(initialHotspotThreshold(DEMO_DATASET),36.5);
+});
+test('bundled study is optional and invalid files do not replace demo fallback',()=>{
+ assert.equal(loadCaseStudy(undefined).dataset,null);assert.match(loadCaseStudy(undefined).message,/missing/);assert.equal(loadCaseStudy('bad json').dataset,null);
+ const raw=importedFixture();raw.features.forEach((f:any)=>f.properties.data_coverage=1);assert.equal(loadCaseStudy(JSON.stringify(raw)).dataset,null);
+});
+test('provided Malaysian case study retains original observations and screening restrictions',()=>{
+ const path=new URL('../assets/case-studies/CoolTown_Real_Zones_2026.geojson',import.meta.url);
+ if(!existsSync(path)){assert.equal(loadCaseStudy(undefined).dataset,null);return;}
+ const text=readFileSync(path,'utf8'),raw=JSON.parse(text),result=loadCaseStudy(text),d=result.dataset!;assert.ok(d);assert.equal(d.zones.length,20);assert.equal(d.zones.filter(z=>environmentalQuality(z).usable).length,11);
+ assert.deepEqual(d.originalGeoJSON,raw);assert.equal(d.zones.filter(z=>!environmentalQuality(z).usable).length,9);
+ for(const z of d.zones){const p=raw.features.find((f:any)=>f.properties.zone_id===z.zone_id).properties;for(const k of ['lst_c','ndvi','data_coverage','observation_start','observation_end','observation_date','data_source'] as const)assert.equal(z[k],p[k]);assert.equal(z.site_verified,false);assert.equal(z.planting_area,0);assert.equal(z.estimated_usable_area,0);}
+ const q=relativeHotspotThreshold(d.zones)!;assert.ok(q>36.5);const hotspots=d.zones.filter(z=>environmentalQuality(z).usable&&z.lst_c!>=q);assert.ok(hotspots.length>0&&hotspots.length<11);assert.equal(recommend(q,DEFAULT_OBJECTIVES,d.zones).length,0);
+ const selected=d.zones.find(z=>environmentalQuality(z).usable&&z.lst_c!>=q&&z.ndvi!<.4&&!/water/i.test(z.landcover));assert.ok(selected);const a=readyAssessment();const cs=recommend(q,DEFAULT_OBJECTIVES,d.zones,80,{[selected!.zone_id]:a});assert.ok(cs.length>0);assert.ok(cs.every(c=>c.preliminary));assert.ok(optimise(cs,5000).cost<=5000);assert.deepEqual(d.originalGeoJSON,raw);
+});
 console.log(`${passed} test groups passed.`);
+
 
 
 

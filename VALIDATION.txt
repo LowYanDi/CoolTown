@@ -1,49 +1,20 @@
-CoolTown Planner — Dynamic Provenance and GIS Validation
+CoolTown Planner — final reliability validation
 
-53 algorithm test groups passed, including the previous assessment/planning regressions.
-TypeScript checks passed through npm.cmd run build. Production dist is regenerated
-with a fresh source/dist SHA256 BUILD-MANIFEST.json. Vite reports a non-fatal large bundle warning.
+63 algorithm test groups passed. TypeScript checks and Vite production build passed.
+The build automatically regenerated BUILD-MANIFEST.json and verified all 41 recorded source/production hashes and all four production files, including the emitted GeoJSON.
 
-New tests cover recent, older and future observation windows, missing/reversed/mixed
-provenance, original data preservation, WGS84 coordinate order and bounds, first
-quality-valid selection, opacity-only presentation, candidate evidence labels,
-missing-key fallback and dynamic export schema 3. Existing solar, budget limits,
-roof exclusivity, weighted objectives, scenario conflicts and assessments still pass.
+Actual supplied dataset: CoolTown_Real_Zones_2026.geojson
+20 polygons; 11 quality-valid at the illustrative 80% minimum; 9 insufficient.
+SHA256: 89e578f069ed0a5582d46a3bdad6d93d2410059a9071a9cd6c540263bff7a1be
+The source asset matches the supplied file byte-for-byte.
+Initial interpolated quality-valid 80th percentile: 44.78442955698896 C.
+Inclusive hotspot count: 3. Invalid/insufficient observations are excluded.
 
-Production browser QA used ARTIFICIAL-GIS-QA, NOT real satellite observations:
-20 valid polygons, 11 quality-pass and 9 insufficient; declared period and historical
-land-cover reference displayed; first valid zone selected; bounds fitted; street
-tiles visibly loaded with attribution; missing satellite key gave street fallback;
-opacity and NDVI/land-cover/candidate layers retained selection; assumed walkway
-assessment generated Shade trees; no browser console errors during these checks.
+Additional tests cover missing/invalid bundled files, empty/constant/single/negative temperature sets, observation preservation, no candidates without site inputs, and explicitly assumed candidates respecting budget. Existing coverage, geometry, provenance, solar independence, exclusivity, objectives, scenario, export, colour and navigator tests remain.
 
-NOT VERIFIED: live MapTiler satellite imagery (no browser key supplied), actual
-CoolTown_Real_Zones_2026.geojson (not supplied), authentic scene dates, site survey
-claims or provider deployment quotas. No claim of independent scientific validation.
+Production browser checks: real case opens by default, 11/20 valid and 3 hotspots. Manual threshold 44 persists across demo/case switching. A separately assumed potentially suitable 100 m2 walkway with cost acknowledgement yields a clearly unverified preliminary shade-tree candidate costing RM1,800. Future scenario comparison/optimisation and JSON export work. Export preserves the actual original GeoJSON, separate assessment, both scenarios, manual threshold and calculated percentile reference.
 
-Limits: 5 MB / 500 imported zones, exact optimiser at most 22 positive eligible
-candidates. No silent truncated plan. Coverage threshold is illustrative. Missing
-metadata stays unavailable and excludes reliable environmental scoring. Imported
-files and assumptions remain session state; refresh clears them. Export first.
+This validates software behaviour and preservation, not satellite accuracy, cadastral topology, engineering suitability or scientific thermal danger. Historical composite metadata is supplied by the file. Production-domain MapTiler key restrictions require account-owner configuration; no private credentials belong in this frontend. The production build has a non-fatal large-JavaScript-chunk advisory.
 
-No backend, database, authentication, ML or Supabase. Only basemap providers are
-contacted. Street tiles follow ordinary interactive OSM usage: attribution, caching,
-referrers, no prefetch or offline download. Satellite needs a public domain-restricted
-MapTiler key and an appropriate licensed plan. See README for policy links.
-
-Satellite follow-up: supplied public browser key tested successfully with satellite-v2.
-The documented satellite-v4 identifier returned not found and was replaced. Production
-browser displayed 12 loaded MapTiler imagery tiles with aligned artificial heat polygons
-and visible attribution. TypeScript and production build passed again. No planning
-algorithms changed; the prior 53-group regression result still applies. Actual user
-GeoJSON, imagery capture date and production-domain key restrictions remain unverified.
-
-Map usability update: 59 algorithm test groups pass (six added). New coverage:
-invalid/insufficient extremes excluded from colour range; legend/map agreement;
-empty/constant/negative/narrow ranges; active dataset/coverage threshold changes;
-ID/name search including insufficient zones; first-valid selection and fallback.
-Production browser: artificial 20-zone fixture, 11 quality-valid colours plus gray;
-legend min36.2/max38.0 C matched raw36.18/37.98 endpoints; first valid zone02 selected;
-search for zone13 returned the insufficient zone; selection changed map coordinates,
-collapsed navigator and kept assessment disabled. Fit study area restored context.
-MapTiler satellite tiles loaded successfully. No real dataset measurements fabricated.
+Reproduce: npm.cmd test; npm.cmd run build.
+Verify without rebuilding: node scripts/verify-manifest.mjs

@@ -1,13 +1,14 @@
 {
-  "generated_at": "2026-10-17T15:23:21.248Z",
+  "generated_at": "2026-10-17T15:44:50.410Z",
   "node": "v24.20.0",
   "build_command": "tsc --noEmit && vite build --configLoader native",
   "source_sha256": {
     "src/algorithms/opportunities.ts": "5fa4488adc7ee8b3d76f7baf6670041e60f0d3dda37baf91858122a9f06a415f",
-    "src/algorithms/planning.test.ts": "9b796a5bce5fa28b1dfa1298f1e3df33db6fea046cd475bf4df9ef140525da96",
+    "src/algorithms/planning.test.ts": "30595a804b542c057c5d7b95001abe059c6f76064216c3a369cb4059ae5f3142",
     "src/algorithms/planning.ts": "34a84e9ba2f1d26413ea26289fd71f7eb289309d7992ab642f32580456593325",
-    "src/algorithms/summary.ts": "8a16f4e632e4afbac03014a0bd46d60f45fcd14cfe34845dd2c75175bd4ac57f",
-    "src/components/DatasetControls.tsx": "beb799652f1eea2a17ba1f63641f96ede2e5614616422d152401fef5dd5858b7",
+    "src/algorithms/summary.ts": "770c6ebe8a94c4c52043bb973260beda99019b8013fd59a6fd1cde1e1452558f",
+    "src/assets/case-studies/CoolTown_Real_Zones_2026.geojson": "89e578f069ed0a5582d46a3bdad6d93d2410059a9071a9cd6c540263bff7a1be",
+    "src/components/DatasetControls.tsx": "06a6656b6ba23862d87d717e1f369ed2e5de446fd027cf0e9550d2fa6e2b5937",
     "src/components/EnvironmentalCharts.tsx": "71cd191a8b82c97ce1e49f27697a2bd3c25f78b15333304e9c1fd386639aab75",
     "src/components/GeoJSONMap.tsx": "cb85d20ede3d8e1f21be6edf43d4037554d58c98dc1d355efa5a247b6def0e80",
     "src/components/PlanningControls.tsx": "3fbae99628068ee63198d2e87a264ccf33a68f9966aca06e54d7879ac3463453",
@@ -17,6 +18,8 @@
     "src/components/TownMap.tsx": "e24d19a904f36da8828ec345885b8fd43063de799eb8d9c929463ad98d504b0d",
     "src/components/ui/button.tsx": "3efcb11204342dd1b60e8f5ac0eb00d48c283cdeeb509345d7fe3bea8898dff0",
     "src/components/ZoneNavigator.tsx": "c28ddc086197b5a7ce5e36ab3f636c7aceeacaaf1a05c0ce3b8fc9d519903e83",
+    "src/data/bundledCaseStudy.ts": "8688d6273622a01a1b112097cd41e9a2565b1a650cf61eb1aae1972bcd7b7447",
+    "src/data/caseStudyModel.ts": "a4924095a25f68ad573051273bf058b3b6ce559505c994af7f19bd678b3bec11",
     "src/data/dataset.ts": "b8a3988c449aabe6e9f9ee62c7d78314e149bb5b5d1d00d8bbcf27bd0a930967",
     "src/data/gis.ts": "6d1b63f3f8723c4de8618a33926902a8f1dbb77eab69122810b7ade13df3d3d6",
     "src/data/loader.ts": "d8551702bef04e0d06da160cc181a028889c4dca8b7373e61eca13ba25864684",
@@ -27,10 +30,11 @@
     "src/data/temperatureScale.ts": "148861c83f38a1200e43a7afb17fb4c073e9d9ecb2e4d632825064b2219a1fa2",
     "src/data/validation.ts": "19db18b94ce7b1cd159aa5ea1924753743b09bc59d34473ac5fdd3f51a1cce8e",
     "src/data/zones.ts": "246340aec9a4c2af1c5a699b9def76388f01fa45d332e381be16a188c1717482",
-    "src/main.tsx": "8c4bf753a27df68c289463d18fe38ed78812d5cb7ff682b2cb6dab06dd8d350e",
+    "src/main.tsx": "f69a32b274b6de791c34223ef5575a38f3a737a2cfe052eb4ade0a874169db41",
     "src/styles.css": "ae40a561df29b111c5dda33179ab8de1376da8f09f3b90a398ab4e1255d3adf4",
     "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
-    "scripts/build-manifest.mjs": "1b2b4ff99b5c040a34941486048c3b8f2ce587e38d6d1054d7df896f0e7267a2",
+    "scripts/build-manifest.mjs": "9cfb14aa91341197cba27c06f16cf2b58c74601c16543c6eadf7375e6fe7e9d5",
+    "scripts/verify-manifest.mjs": "a4c09edecaa541a06351389c39bb6e87bb17b5ac0000ed97cb0bd864c5749ee2",
     "package.json": "3de73cc41108e99bcac324e0a188f81c474fa32b4b199071aa9f727f5e3171aa",
     "package-lock.json": "00ea89342ef5cd748e433dfc645e1f7f3268824ed6856cdf9611122e5fde1eff",
     "index.html": "8684d38e9c54069925f4aae1ad6bb49b7de0ef7cabd683a907a547ff36f27b54",
@@ -38,8 +42,9 @@
     "vite.config.ts": "5e7f7055310aabd506be72e8da359ef58f185554f3c7fd4f38ac390e9706a9b3"
   },
   "dist_sha256": {
-    "dist/assets/index-D384ihQ8.css": "298356ffa63cb8f2c2fe6f7012f9a70ac1d3a4f144aaf2e971964444b9a7f400",
-    "dist/assets/index-pPTKLrn_.js": "f16f8b629a10f5e9c0a37c03152efa35e3799a8c85a23d32c0a37b2e2f1015fc",
-    "dist/index.html": "8e6ff746bebfdc3e8f43a0ac4a30076bf2a634fd325dfce3c838558dc147a9a5"
+    "dist/assets/CoolTown_Real_Zones_2026-CwYh7fC1.geojson": "89e578f069ed0a5582d46a3bdad6d93d2410059a9071a9cd6c540263bff7a1be",
+    "dist/assets/index-Bs6hYGaS.js": "b18db1f111fefbc516615c02126b42075649aaabce7356be77620f1aff38732e",
+    "dist/assets/index-CKXxfC-w.css": "52ee3d6b6950a429839d46a8d3f57e79e03645be6801b5d4f381997f10ddabeb",
+    "dist/index.html": "1a46bb29b9505643b5f5fc313eba8560eb31656b39abd6f0471c8d27e2997fdf"
   }
 }

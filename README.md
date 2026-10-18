@@ -13,7 +13,7 @@ npm run build
 npm run dev
 ```
 
-In Windows PowerShell use `npm.cmd` if npm.ps1 is blocked. Deploy the newly generated `dist/`, not an older build. Do not commit node_modules. The update package includes rebuilt dist and a BUILD-MANIFEST.json recording source and build hashes. Every npm run build regenerates the manifest through scripts/build-manifest.mjs. Leaflet 1.9.4 and its CSS are bundled locally; package.json and package-lock.json must be updated together.
+In Windows PowerShell use `npm.cmd` if npm.ps1 is blocked. Deploy the newly generated `dist/`, not an older build. Do not commit node_modules. The update package includes rebuilt dist and a BUILD-MANIFEST.json recording source and build hashes. Every npm run build regenerates the manifest through scripts/build-manifest.mjs and verifies all recorded hashes, the complete production inventory and the original case-study asset through scripts/verify-manifest.mjs. Leaflet 1.9.4 and its CSS are bundled locally; package.json and package-lock.json must be updated together.
 
 ## Environmental quality
 
@@ -47,17 +47,17 @@ Whole-roof solar and cool roofs are mutually exclusive in BOTH original and opti
 - src/components/DatasetControls.tsx: local file input, dataset toggle, import errors and validation report.
 - src/components/GeoJSONMap.tsx: active Leaflet renderer with locally bundled CSS. Uses selected validated records, all five map layers, date/source popups, keyboard-accessible zone buttons and shared quality policy. Street tiles and optional MapTiler satellite tiles provide geographic context.
 
-In Existing Township Analysis choose Synthetic Demo Map or Real GIS Study Area. Real mode starts empty until a local GeoJSON is accepted. Importing selects it for Overview, Analysis, Recommendations, Budget, Impact and JSON export. Future Township remains a separate synthetic scenario model. Switching datasets clears zone selection and per-candidate exclusions. The imported file remains in memory only and is discarded on refresh; it is not uploaded.
+In Existing Township Analysis choose Malaysian 2026 Case Study, Synthetic Demo Dataset or Import Custom GeoJSON. The supplied bundled case study is selected at startup when present and valid. Custom import starts empty until a local GeoJSON is accepted. Importing selects it for Overview, Analysis, Recommendations, Budget, Impact and JSON export. Future Township remains a separate synthetic scenario model. Switching datasets selects the first quality-valid zone (or the first visible zone when none pass) and clears per-candidate exclusions. The imported file remains in memory only and is discarded on refresh; it is not uploaded.
 
-Imports accept a WGS84 FeatureCollection of up to 500 zones and 5 MB. Invalid geometries/duplicate IDs are skipped; invalid measurements become null with visible warnings. Missing/invalid date or source keeps its valid polygon visible with unknown provenance and excludes it from reliable environmental scoring. Absent data_status is treated as the user's observed declaration on import, but explicit synthetic/assumed/unknown records are excluded. This does not certify the observations. A failed import leaves the last accepted dataset unchanged. No actual Malaysian observations or boundaries are distributed.
+Imports accept a WGS84 FeatureCollection of up to 500 zones and 5 MB. Invalid geometries/duplicate IDs are skipped; invalid measurements become null with visible warnings. Missing/invalid date or source keeps its valid polygon visible with unknown provenance and excludes it from reliable environmental scoring. Absent data_status is treated as the user's observed declaration on import, but explicit synthetic/assumed/unknown records are excluded. This does not certify the observations. A failed import leaves the last accepted dataset unchanged. The supplied original Malaysian case-study GeoJSON is bundled unchanged; no boundaries or measurements are fabricated.
 
 The exact optimiser still supports at most 22 positive-score eligible candidates. Larger candidate sets show an explicit blocking error and no partial plan; exclusions can reduce the set. JSON export records that error. Missing area_ha contributes no area and is flagged; area-weighted indicators exclude missing/zero areas. No geometry-to-area estimate or site/solar assumptions are invented. Supplying only satellite observations may correctly yield no installable interventions: planting areas, roof exposure and solar suitability need separate evidence.
 
-Properties include zone_id, zone_name, lst_c, ndvi, landcover, observation_date or observation_start / observation_end (YYYY-MM-DD), data_source, data_status, data_coverage (percent), area_ha, site_type and site suitability/solar inputs. Coordinates use [longitude,latitude]. See UPGRADE-NOTES.md for the complete contract. Declared observed provenance without date/source becomes unknown. Geometry validation is not topology or survey certification. No real observations are included.
+Properties include zone_id, zone_name, lst_c, ndvi, landcover, observation_date or observation_start / observation_end (YYYY-MM-DD), data_source, data_status, data_coverage (percent), area_ha, site_type and site suitability/solar inputs. Coordinates use [longitude,latitude]. See UPGRADE-NOTES.md for the complete contract. Declared observed provenance without date/source becomes unknown. Geometry validation is not topology or survey certification. The bundled real case study retains the original source declarations; the frontend does not independently certify their accuracy.
 
 ## Validation and export
 
-59 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
+63 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
 
 ## Environmental charts and two-stage planning update
 
@@ -69,7 +69,7 @@ A. Preliminary Sustainability Opportunities uses valid environmental indicators 
 
 B. Screened Planning Candidates accepts either imported declarations of site verification with complete intervention inputs, or a separately declared Preliminary Site Assessment. The latter always remains Assumed / User-supplied / NOT VERIFIED, even when selected by the budget optimiser. Missing or unsuitable assessments create no candidates. Imported site_verified flags are never changed. Synthetic demo and Future Township workflows remain separate.
 
-JSON export adds preliminary_opportunities and grouped_validation, preserving original observations and the feasible plan separately. The actual user Landsat/Sentinel-2 file was not available during this update; automated and browser checks use artificial fixtures, not claimed real observations.
+JSON export adds preliminary_opportunities and grouped_validation, preserving original observations and the feasible plan separately. The supplied CoolTown_Real_Zones_2026.geojson was tested directly: 20 polygons, 11 passing the default 80% quality threshold and 9 insufficient. The original supplied JSON and exported original_geojson match.
 
 ## Preliminary Site Assessment
 
@@ -99,3 +99,11 @@ Temperature colours linearly interpolate blue → warm yellow → red across the
 The Zone Navigator is collapsed initially and searches IDs or names case-insensitively. Results are bounded in a scrolling area, include data-quality status and retain insufficient zones. Choosing a result highlights/zooms to its bounds and collapses the list. Fit study area restores all polygons. New imports still fit the full dataset and select the first quality-valid zone; if none passes, the first zone remains visible as insufficient. Layer, opacity and basemap changes never change selection.
 
 MapTiler remains configured by VITE_MAPTILER_KEY. Missing-key instructions now explain .env.local / hosting environment setup and restart/rebuild; street fallback remains available. Do not replace your existing public key or domain restrictions when applying this source patch.
+
+## Bundled Malaysian 2026 case study and relative hotspots
+
+The original asset lives at src/assets/case-studies/CoolTown_Real_Zones_2026.geojson. Optional Vite globs allow builds without it; missing/invalid assets display a message and retain demo/custom options. A valid asset is emitted as an unchanged static download. Custom uploads remain local browser memory. Case, demo and custom assessments and manual thresholds have separate state; refresh restores defaults. Replacing a custom import resets only that custom dataset’s assumptions and threshold.
+
+Real datasets initialise the hotspot threshold from quality-valid LST using linear interpolation at sorted index (n−1) × 0.8. At the default 80% coverage, this supplied file yields 44.78442955698896°C and 3 zones at or above the threshold. Display rounding does not change calculation precision. This is relative surface heat, not a medical or scientifically certified danger threshold. Ordinary map interactions and coverage changes do not overwrite manual thresholds. Empty valid sets use 36.5°C as a control fallback with no reliable hotspots; constant datasets use their common temperature and all valid zones meet the inclusive threshold.
+
+The supplied metadata describes historical composites from 2026-01-01 through 2026-10-17, not real-time measurements. ESA WorldCover 2021 is historical reference land cover, not verified current land use. The case study creates no construction candidates without separate eligible site inputs. Public MapTiler keys belong in local/deployment configuration; example configuration deliberately contains no actual key. Existing deployment variables are unchanged.

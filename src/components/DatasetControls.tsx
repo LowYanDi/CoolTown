@@ -1,9 +1,10 @@
+import type { DatasetChoice } from '../data/caseStudyModel';
 import { warningGroups } from '../data/presentation';
 import { DEFAULT_MIN_COVERAGE } from '../data/validation';
 import { useRef, useState } from 'react';
 import { importStudyArea, MAX_IMPORT_BYTES, type PlanningDataset } from '../data/dataset';
-export function DatasetControls({ mode, onMode, imported, onImport, minimumCoverage = DEFAULT_MIN_COVERAGE }: {
-    minimumCoverage?: number; mode: 'demo' | 'real'; onMode: (mode: 'demo' | 'real') => void;
+export function DatasetControls({ mode, onMode, imported, onImport, minimumCoverage = DEFAULT_MIN_COVERAGE,caseAvailable=false,caseMessage,caseAssetURL }: {
+    minimumCoverage?: number; mode: DatasetChoice; onMode: (mode: DatasetChoice) => void; caseAvailable?:boolean;caseMessage?:string;caseAssetURL?:string;
     imported: PlanningDataset | null; onImport: (dataset: PlanningDataset) => void;
 }) {
     const groups = warningGroups(imported?.zones ?? [], minimumCoverage);
@@ -13,9 +14,11 @@ export function DatasetControls({ mode, onMode, imported, onImport, minimumCover
     const ticket = useRef(0);
     return <section className="panel">
         <div className="layer-tabs" role="group" aria-label="Study dataset">
-            <button type="button" aria-pressed={mode === 'demo'} className={mode === 'demo' ? 'selected' : ''} onClick={() => onMode('demo')}>Synthetic Demo Map</button>
-            <button type="button" aria-pressed={mode === 'real'} className={mode === 'real' ? 'selected' : ''} onClick={() => onMode('real')}>Real GIS Study Area</button>
+            {caseAvailable&&<button type="button" aria-pressed={mode==='case'} className={mode==='case'?'selected':''} onClick={()=>onMode('case')}>Malaysian 2026 Case Study</button>}
+            <button type="button" aria-pressed={mode === 'demo'} className={mode === 'demo' ? 'selected' : ''} onClick={() => onMode('demo')}>Synthetic Demo Dataset</button>
+            <button type="button" aria-pressed={mode === 'real'} className={mode === 'real' ? 'selected' : ''} onClick={() => onMode('real')}>Import Custom GeoJSON</button>
         </div>
+        {caseMessage&&<p className="source-note">{caseMessage} {caseAvailable&&caseAssetURL&&<a href={caseAssetURL} download="CoolTown_Real_Zones_2026.geojson">Download original case-study GeoJSON</a>}</p>}
         <label className="field"><span>Import local GeoJSON</span><input aria-label="Import local GeoJSON" type="file" accept=".geojson,.json,application/geo+json,application/json" disabled={busy} onChange={async e => {
             const file = e.target.files?.[0]; e.target.value = ''; if (!file) return;
             const current = ++ticket.current; setError(''); setBusy(true);
@@ -26,7 +29,7 @@ export function DatasetControls({ mode, onMode, imported, onImport, minimumCover
             } catch (err) { if (ticket.current === current) setError(err instanceof Error ? err.message : 'Unable to read GeoJSON.'); }
             finally { if (ticket.current === current) setBusy(false); }
         }}/></label>
-        <p className="source-note">Files stay in this browser session and are never uploaded to a server. Imported observations are user-declared, not independently verified. Valid records replace the active study dataset; invalid records are skipped or flagged. Refreshing clears the import.</p>
+        <p className="source-note">Files stay in this browser session and are never uploaded to a server. Imported observations are user-declared, not independently verified. Valid records replace the active study dataset; invalid records are skipped or flagged. Refreshing clears custom imports and site assumptions; the bundled case study remains available.</p>
         {busy && <p role="status">Validating GeoJSON…</p>}
         {error && <p role="alert" className="error">{error} The last accepted dataset is unchanged.</p>}
         {imported && <p>{imported.title}: {imported.zones.length} geographic zones retained; {groups.filter(g=>g.details.length).length} warning categories.</p>}

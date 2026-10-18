@@ -1,3 +1,4 @@
+import { relativeHotspotThreshold } from '../data/caseStudyModel.ts';
 import { type SiteAssessments } from '../data/siteAssessment.ts';
 import { datasetProvenance } from '../data/provenance.ts';
 import { priority } from './planning.ts';
@@ -38,7 +39,7 @@ export function buildPlanningSummary(input: SummaryInput, exportedAt = new Date(
         notice: dataset.mode === 'demo' ? 'Synthetic demonstration. No observed satellite data.' : 'User-imported observed records; provenance is declared, not independently verified. Derived indicators and assumed costs are not engineering approval.',
         zones,
         objectives: { raw: input.objectives, normalised: normaliseObjectives(input.objectives), method: SCORE_METHOD },
-        methodology: { intervention_scoring: SCORE_METHOD, zone_priority: '55% clamped relative heat + 45% clamped vegetation deficit; unavailable if environmental inputs are invalid.', hotspot_threshold_c: input.threshold, optimisation: 'Exact subset enumeration with eligibility, exclusions, integer-cent budget and mutually exclusive whole-roof groups. Maximise weighted heuristic points; lower cost breaks ties.', future_assumptions: SCENARIO_ASSUMPTIONS },
+        methodology: { intervention_scoring: SCORE_METHOD, zone_priority: '55% clamped relative heat + 45% clamped vegetation deficit; unavailable if environmental inputs are invalid.', hotspot_threshold_c: input.threshold, relative_hotspot_reference_c: dataset.mode==='real'?relativeHotspotThreshold(zones,input.minimumCoverage):null, hotspot_initialisation:'Real datasets initialise at the linear-interpolated 80th percentile of quality-valid LST; manual threshold remains independent. Relative surface heat, not a certified danger threshold.', optimisation: 'Exact subset enumeration with eligibility, exclusions, integer-cent budget and mutually exclusive whole-roof groups. Maximise weighted heuristic points; lower cost breaks ties.', future_assumptions: SCENARIO_ASSUMPTIONS },
         existing_township: { budget: input.budget, excluded: input.excluded, candidates, ...plan, green_intervention_area_m2: plan.selected.reduce((n, c) => n + c.green, 0), annual_generation_kwh: plan.selected.reduce((n, c) => n + c.generation, 0) },
         future_scenarios: input.scenarios.map(s => {
             const m = scenarioMetrics(s, input.objectives);

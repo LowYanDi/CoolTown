@@ -62,7 +62,7 @@ Enumerates all subsets for the small demo dataset. Filters excluded/ineligible/i
 
 ## Data validation and future GIS
 
-The original eight demo records now pass through `loadGeoJSON()` in `src/data/loader.ts`. The demo still drives the schematic; no real dataset is bundled; a local upload UI now validates and selects observed records. To integrate future data, call `parseGeoJSON(text)` or `loadGeoJSON(object)` and examine its `{zones, issues}` result before connecting it to application state and a real map renderer.
+The original eight demo records now pass through `loadGeoJSON()` in `src/data/loader.ts`. The demo still drives the schematic; the original supplied Malaysian 2026 case study is bundled; a local upload UI now validates and selects observed records. To integrate future data, call `parseGeoJSON(text)` or `loadGeoJSON(object)` and examine its `{zones, issues}` result before connecting it to application state and a real map renderer.
 
 The supported contract is a WGS84 FeatureCollection containing Polygon or MultiPolygon Features. Rings must close, have at least four positions, finite longitude/latitude within bounds, and non-zero signed area. Validation does not certify topology (self-intersections/holes), survey accuracy or provenance authenticity. IDs must be non-empty and unique. Invalid geometry/duplicate-ID features are skipped with issues.
 
@@ -83,11 +83,11 @@ On Linux/macOS use `npm` instead of `npm.cmd`. Existing dependencies suffice. Th
 
 ## Activated real-data integration
 
-Existing Township Analysis now includes Synthetic Demo Map / Real GIS Study Area and a local GeoJSON file input. Leaflet 1.9.4 and CSS are imported locally. Both map modes use the same active dataset as statistics, quality rules, recommendations, exact optimisation and export. Empty real mode has zero records; no synthetic fallback occurs. All five map layers and interactive selection work with imported polygons. Observation dates and source declarations are shown in popups, the selected-zone panel and exported records.
+Existing Township Analysis now includes Malaysian 2026 Case Study / Synthetic Demo Dataset / Import Custom GeoJSON and a local GeoJSON file input. Leaflet 1.9.4 and CSS are imported locally. Both map modes use the same active dataset as statistics, quality rules, recommendations, exact optimisation and export. Empty real mode has zero records; no synthetic fallback occurs. All five map layers and interactive selection work with imported polygons. Observation dates and source declarations are shown in popups, the selected-zone panel and exported records.
 
 The importer accepts up to 500 zones / 5 MB and uses loadGeoJSON. Without explicit data_status, import mode asserts observed provenance only with valid date/source metadata; explicit synthetic/unknown/assumed records are excluded. Invalid measurements are flagged and remain null; invalid geometry/duplicate IDs are skipped. Missing site and solar inputs are not filled from demo assumptions. The 80% configurable shared quality requirement is preserved. The UI warns when more than 22 eligible candidates prevent exact optimisation; no silent truncation occurs.
 
-The independent Future Township scenarios stay synthetic. Costs remain assumed; environmental scores remain derived heuristics. Imported declarations are not independent satellite verification. No real boundaries, satellite observations or external basemap service are included. See README.md and VALIDATION.txt.
+The independent Future Township scenarios stay synthetic. Costs remain assumed; environmental scores remain derived heuristics. Imported declarations are not independent satellite verification. The supplied original case study is included unchanged; street and optional MapTiler satellite basemaps provide geographic context. See README.md and VALIDATION.txt.
 
 ## Chart, warning and planning-stage update
 
@@ -104,3 +104,7 @@ Fixed historical context state, checkbox and export were removed. Date ranges an
 ## Map usability patch
 
 New temperatureScale.ts, TemperatureLegend.tsx and ZoneNavigator.tsx. GeoJSONMap/TownMap use a shared quality-valid relative Celsius colour scale. The real-map long zone button list is replaced by collapsed searchable bounded navigation. Zoom on explicit selection, full-study reset, and first-valid import selection are preserved. No planning data or algorithms changed. No new dependencies.
+
+## Final reliability update
+
+Added optional bundled case-study loading and separate case/custom/demo state. Added a quality-filtered, interpolated 80th-percentile initial hotspot threshold for real data. Manual thresholds persist across map interactions and dataset switching. New imports reset only their own threshold and assessments. Original observations and GeoJSON remain separate from site assumptions. Added four test groups (63 total) and automatic manifest/hash/inventory verification. No new dependencies or visual redesign. See INSTALL-CHANGES.md for the exact replacement files.

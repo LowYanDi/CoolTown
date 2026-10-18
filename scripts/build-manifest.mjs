@@ -13,3 +13,4 @@ for (const match of html.matchAll(/(?:src|href)="\/([^"?]+)"/g)) {
 }
 writeFileSync(join(root, 'BUILD-MANIFEST.json'), JSON.stringify({ generated_at: new Date().toISOString(), node: process.version, build_command: 'tsc --noEmit && vite build --configLoader native', source_sha256: Object.fromEntries(sources.map(f => [f, hash(f)])), dist_sha256: Object.fromEntries(assets.map(f => [f, hash(f)])) }, null, 2));
 console.log('Build manifest regenerated for ' + assets.length + ' production files.');
+await import('./verify-manifest.mjs');
