@@ -1,18 +1,20 @@
 {
-  "generated_at": "2026-10-18T14:04:46.675Z",
+  "generated_at": "2026-10-19T03:52:46.518Z",
   "node": "v24.20.0",
   "build_command": "tsc --noEmit && vite build --configLoader native",
   "source_sha256": {
+    "src/algorithms/impact.ts": "bf8c44908f111ee9e9f67457f337ccd439bac46ecfc24d8f70f119196fa788ef",
     "src/algorithms/opportunities.ts": "5fa4488adc7ee8b3d76f7baf6670041e60f0d3dda37baf91858122a9f06a415f",
-    "src/algorithms/planning.test.ts": "e44e5e0b8bde90a0c4b4bfdd7af797b306f59c86b5c9ab5b9a7822ec948b1135",
+    "src/algorithms/planning.test.ts": "1f1e6b8f3e4ebf0ac512dc36ea30e216d224ba5d9c6208d4c2e241b819e9a09d",
     "src/algorithms/planning.ts": "0b5fd56e7fba6917a160ec1692e53dcabfc09378665b8e5c82896183e6aaa74c",
     "src/algorithms/readiness.ts": "9808b384d301175b08d9d0d9be3b658720ba60092555ff4a822791b0572095c9",
-    "src/algorithms/summary.ts": "85a6ed589d6494e92c7c2821c81850c60d1f4dcfa0fd57a77957db1e806e95b6",
+    "src/algorithms/summary.ts": "9fd7a86107ba8740e14685829deaffc8fbe44bb6a0c168cf8235b357ba8ffd0b",
     "src/assets/case-studies/CoolTown_Real_Zones_2026.geojson": "89e578f069ed0a5582d46a3bdad6d93d2410059a9071a9cd6c540263bff7a1be",
     "src/components/DatasetControls.tsx": "63dcee9523f7d372666518df7025b188e42826c6539c794d9cb38bd11a3fceb6",
     "src/components/EnvironmentalCharts.tsx": "71cd191a8b82c97ce1e49f27697a2bd3c25f78b15333304e9c1fd386639aab75",
     "src/components/FairComparison.tsx": "cfa583d115fc0789ef9a6acb15c322d67a34930d5c07ef0fffc1bbc8361d876c",
     "src/components/GeoJSONMap.tsx": "612e3c51c440fb35abdf7134db204e315324902b7b313afd54bb89209095d109",
+    "src/components/ImpactPanel.tsx": "1b15c8c728b7e617d5f8292db00d6dd731037510ffc2cc18374dd6bfcc9529cf",
     "src/components/LayerLegend.tsx": "0c1f9798bfa24890084b69465e03ea4a2ad9ee8dee185a787821b96ae98c49de",
     "src/components/PlanningControls.tsx": "3fbae99628068ee63198d2e87a264ccf33a68f9966aca06e54d7879ac3463453",
     "src/components/ProvenancePanel.tsx": "d12617b9a4d49be57c56962177fb082c7474c31f05ca4d8bfca96d0f69d68ebe",
@@ -35,14 +37,14 @@
     "src/data/temperatureScale.ts": "148861c83f38a1200e43a7afb17fb4c073e9d9ecb2e4d632825064b2219a1fa2",
     "src/data/validation.ts": "19db18b94ce7b1cd159aa5ea1924753743b09bc59d34473ac5fdd3f51a1cce8e",
     "src/data/zones.ts": "246340aec9a4c2af1c5a699b9def76388f01fa45d332e381be16a188c1717482",
-    "src/main.tsx": "4968fe295a2ec4ae54fb32025f1547603bc2216089e1dad99757176667044e0c",
+    "src/main.tsx": "51196cf7337be3cce9ec818102c6f2e748dee043c792ca7e65dc3cef53eb8e7f",
     "src/styles.css": "ae40a561df29b111c5dda33179ab8de1376da8f09f3b90a398ab4e1255d3adf4",
     "src/vite-env.d.ts": "65996936fbb042915f7b74a200fcdde7e410f32a669b1ab9597cfaa4b0faddb5",
     "scripts/assets/case-studies/CoolTown_Real_Zones_2026.geojson": "89e578f069ed0a5582d46a3bdad6d93d2410059a9071a9cd6c540263bff7a1be",
     "scripts/build-manifest.mjs": "cd84e00a9858db6a06208e28841d4a4143c57f43e2b4900fa6a8709b931a3204",
     "scripts/verify-manifest.mjs": "a4c09edecaa541a06351389c39bb6e87bb17b5ac0000ed97cb0bd864c5749ee2",
-    "package.json": "c489e9b4b9a82de15651d445fc52577993b89a59e218d150b4afdc6e317e7540",
-    "package-lock.json": "449a2c61336e8d4cb25ea6414bfb0a7d27732e02e2d342937b501cefd525056c",
+    "package.json": "3de73cc41108e99bcac324e0a188f81c474fa32b4b199071aa9f727f5e3171aa",
+    "package-lock.json": "00ea89342ef5cd748e433dfc645e1f7f3268824ed6856cdf9611122e5fde1eff",
     "index.html": "8684d38e9c54069925f4aae1ad6bb49b7de0ef7cabd683a907a547ff36f27b54",
     "tsconfig.json": "7890b5f16ef76d9e5b95291677afc7db7da01eb8da7ced5a872d7d01f0f05ae6",
     "vite.config.ts": "5e7f7055310aabd506be72e8da359ef58f185554f3c7fd4f38ac390e9706a9b3"
@@ -50,7 +52,7 @@
   "dist_sha256": {
     "dist/assets/CoolTown_Real_Zones_2026-CwYh7fC1.geojson": "89e578f069ed0a5582d46a3bdad6d93d2410059a9071a9cd6c540263bff7a1be",
     "dist/assets/index-C42F72qV.css": "0ff56a698414f0f0825348a742ca722fb228d65ffab7ec2de25ae59af251f773",
-    "dist/assets/index-Digpm6eF.js": "10aa77f2976a84d77a86097f1caf61482c6171560e275b6da2670a51c27dc5f5",
-    "dist/index.html": "5f20658c4f3c7ca2e1915ca92d338304c8d8aaf1707936493ece2ede0e32ebb4"
+    "dist/assets/index-G0CGYnK1.js": "e0a722ed2a7d003179c201b19cbb2f5b592b727ce29b949d3cf89e0a2fbf15d9",
+    "dist/index.html": "465b4c136b55461b92edb30f65c90954e154b879159d38ec376935b1d2a5d1a7"
   }
 }

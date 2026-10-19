@@ -1,3 +1,4 @@
+import { portfolioImpact,financialScenario,studyLabel,EMPTY_STUDY,type GridAssumptions,type FinancialInputs,type StudyLabel } from './impact.ts';
 import { costSensitivity,futureComparison,pilotReadiness,type PilotChecks,type ComparisonSettings } from './readiness.ts';
 import { relativeHotspotThreshold } from '../data/caseStudyModel.ts';
 import { type SiteAssessments } from '../data/siteAssessment.ts';
@@ -10,6 +11,7 @@ import { COVERAGE_POLICY, coverageThreshold, environmentalQuality } from '../dat
 import { zones, source, demoDataset } from '../data/zones.ts';
 import { recommend, planningResult, optimiseScenario, scenarioMetrics, normaliseObjectives, solar, SCORE_METHOD, SCENARIO_ASSUMPTIONS, type Objectives, type Scenario, type Solar } from './planning.ts';
 export type SummaryInput = {
+    grid?:GridAssumptions; financialInputs?:Record<string,FinancialInputs>; financialCandidateId?:string; study?:StudyLabel;
     comparison?:ComparisonSettings; pilotChecks?:PilotChecks; exampleZoneIds?:string[];
     siteAssessments?: SiteAssessments; selectedZoneIds?: string[]; budget: number; dataset?: PlanningDataset;
     excluded: string[];
@@ -24,7 +26,11 @@ export function buildPlanningSummary(input: SummaryInput, exportedAt = new Date(
     const candidates = recommend(input.threshold, input.objectives, zones, input.minimumCoverage, input.siteAssessments);
     const plan = planningResult(candidates, input.budget, input.excluded);
     return {
-        schema_version: 4,
+        schema_version: 5,
+        estimated_solar_carbon_impact:portfolioImpact(plan.selected,input.grid),
+        financial_scenario:financialScenario(plan.selected.find(c=>c.id===input.financialCandidateId),input.financialInputs?.[input.financialCandidateId??'']),
+        study_location:studyLabel(input.study??EMPTY_STUDY),
+        ownership_notice:'Independent land ownership and township-boundary verification have not been completed.',
         application: 'CoolTown Planner',
         exported_at: exportedAt,
         data_source: { id: dataset.id, title: dataset.title, mode: dataset.mode },
@@ -47,7 +53,7 @@ export function buildPlanningSummary(input: SummaryInput, exportedAt = new Date(
             const m = scenarioMetrics(s, input.objectives);
             return { ...s, evidence: 'Synthetic planning scenario with assumed costs and solar resources; not derived from imported boundaries.', valid: m.valid, errors: m.errors, metrics: m.valid ? m : null, budget_constrained: optimiseScenario(s, input.objectives) };
         }),
-        cost_sensitivity: costSensitivity(candidates,input.budget,input.excluded),
+        cost_sensitivity: costSensitivity(candidates,input.budget,input.excluded).map(row=>({...row,estimated_solar_carbon_impact:portfolioImpact(row.plan.selected,input.grid)})),
         comparison_constraints: input.comparison??{equal:false,area:100,budget:1000000},
         future_comparison: futureComparison(input.scenarios,input.comparison??{equal:false,area:100,budget:1000000},input.objectives),
         guided_example: {zone_ids:input.exampleZoneIds??[],notice:'Demonstration assumptions, not verified site data.'},

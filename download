@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+env.download
+*.zip
+*.log
+.npm-cache/
+.sites-runtime/
+.openai/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp

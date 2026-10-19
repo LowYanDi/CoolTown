@@ -1,6 +1,6 @@
 # CoolTown Planner
 
-React + TypeScript frontend-only planning prototype. Existing five-page design, schematic map, zone selection, multi-objective scoring, solar calculator, scenario comparisons and JSON export are retained. No backend, database, authentication or machine learning is used. The only external service requests are map basemap providers. Bundled demo records are synthetic; imported observations remain user-declared. Costs and solar resources are assumptions unless explicitly supplied.
+React + TypeScript frontend-only planning prototype. Existing five-page design, schematic map, zone selection, multi-objective scoring, solar calculator, scenario comparisons and JSON export are retained. No backend, database, authentication or machine learning is used. The only external service requests are map basemap providers. The default bundled Malaysian 2026 case contains historical observations with declared provenance; the separate eight-zone demo is synthetic. Costs and solar resources are assumptions unless explicitly supplied.
 
 ## Run and build
 
@@ -57,7 +57,7 @@ Properties include zone_id, zone_name, lst_c, ndvi, landcover, observation_date 
 
 ## Validation and export
 
-74 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
+78 test groups cover the original 23 behaviours plus coverage, roof conflicts, local imports, selected-dataset export, provenance, missing solar inputs and oversized optimiser guards. See VALIDATION.txt. JSON export retains raw scenarios, error states, feasible alternatives, objective weights, coverage policy and per-zone quality reasons, selected interventions and the independent solar calculation. Session state resets on refresh.
 
 ## Environmental charts and two-stage planning update
 
@@ -120,8 +120,46 @@ Cost sensitivity runs exact optimisation three times at base, +10% and +20% cost
 
 Impact & Evidence distinguishes observed/synthetic baseline, calculated indicators, assumed estimates and unmeasured outcomes. Pilot checklist entries are scoped to the active dataset and candidate. Verified and not-applicable claims need an evidence reference or reason to count; entries are user declarations and do not change screening or independently verify construction. Session refresh clears checklist/assumption state. A replacement custom import clears that dataset's checklist. Review evidence again whenever a proposal changes.
 
-Export schema 4 preserves the earlier fields and adds cost_sensitivity, comparison_constraints, future_comparison, guided_example, pilot_checklists and explicit null unverified environmental outcomes. The original future_scenarios retain saved independent inputs; future_comparison contains the active comparison projection.
+Export schema 5 preserves the earlier fields and adds cost_sensitivity, comparison_constraints, future_comparison, guided_example, pilot_checklists and explicit null unverified environmental outcomes. The original future_scenarios retain saved independent inputs; future_comparison contains the active comparison projection.
 
 ## Final end-to-end reliability patch
 
 Pilot evidence is bound to the proposal inputs it assessed. If quantities, site assumptions, costs or verification context change, earlier evidence no longer counts for the revised candidate. Objective-weight changes alone do not invalidate it. Guided-example reset restores prior evidence. Basemap/opacity preferences now persist across page transitions. See FINAL-QA-REPORT.md for actual live and local browser results, remaining limits and deployment follow-up.
+
+## Final scoring, impact and submission upgrade
+
+Live prototype: https://cooltownplanner.netlify.app/ (deployment is separate from this source package).
+CoolTown links environmental opportunities to explicitly assumed site conditions and an exact constrained budget decision. This goes beyond displaying GIS layers: eligibility, conflicting roof choices, affordability and preference weights determine an inspectable portfolio.
+
+PLANET alignment: climate resilience through relative heat investigation; energy/carbon through conditional solar screening; biodiversity through NDVI and historical-cover investigation. SDP's Sustainability Strategy and Roadmap 2030 includes a 40% Scope 1/2 reduction target. CoolTown does not establish corporate emissions-accounting contributions. Source: https://www.simedarbyproperty.com/sustainability/
+
+REAL means historical Landsat/Sentinel-2/WorldCover-derived observations with declared provenance, not independently authenticated measurements. ASSUMED means site area, suitability, solar resources, costs and sensitivity scenarios. CALCULATED means heuristic scores, selected portfolios and conditional estimates. UNVERIFIED means ownership, engineering approval, actual cooling, biodiversity, realised savings and achieved emissions reduction. The bundled 20 polygons retain 11 quality-valid / 9 insufficient-data zones at 80%. The declared 2026 composite window ends 17 October 2026; WorldCover 2021 is historical reference. Neither denotes current land ownership or real-time conditions.
+
+### Conditional solar impact and finance
+
+Impact & Evidence totals only selected solar candidates in the current optimised existing-township portfolio. The separate solar calculator does not contribute. Each +10/+20% sensitivity row uses its own reoptimised portfolio. No selected PV means zero generation and zero associated avoidance. Otherwise missing applicable region, factor/year/source or declared displacement percentage/arrangement produces Not estimated. Selecting another region clears the previous factor; Peninsular data is never automatically assigned to Sabah/Sarawak.
+
+Avoided grid emissions (tCO2e/year) = selected annual generation × explicitly assumed displacement percentage / 100 × applicable kgCO2e/kWh / 1000. The optional Peninsular Malaysia preset uses the 2024 provisional 0.740 factor published 23 February 2026 by the Energy Commission. Its Gg/GWh units equal kg/kWh. Source: https://myenergystats.st.gov.my/documents/d/guest/grid-emission-factor-gef-in-malaysia-2022-2024-provisional-
+The published generation mix includes generators that may issue RECs; contractual and accounting treatment requires separate review. This is not verified corporate Scope 1/2 reduction. With explicit 100% displacement, 35,360 kWh × .740 / 1000 = 26.1664 tCO2e. The actual co2_reduction outcome remains null. JSON schema 5 exports formulas, inputs, sources and sensitivity estimates separately.
+
+Financial screening requires choosing a selected solar intervention and explicitly entering an avoided price, self-consumption percentage, applicable export compensation, O&M, installation cost and provider/arrangement reference. No universal TNB tariff is supplied. The remaining fraction is assumed exported, so users must assess the actual arrangement; curtailment is not modelled. Value = generation × self-consumed fraction × avoided RM/kWh + generation × exported fraction × export RM/kWh. Net benefit = value − annual O&M. Simple payback = installation cost / positive annual net benefit. Incomplete inputs give Not estimated; non-positive net gives no payback. Financing, degradation, taxes, replacement and verified bill savings are excluded. Inputs are session-only and isolated by dataset; a new import clears that dataset's impact assumptions.
+
+### Research and pilot evidence
+
+Jumari et al. (2023), Analysis of urban heat islands with Landsat satellite images and GIS in Kuala Lumpur Metropolitan City, Heliyon 9 e18424: https://doi.org/10.1016/j.heliyon.2023.e18424 . The paper motivates examining urban development, vegetation and satellite surface heat in Malaysia.
+Green Spaces Growth Impact on the Urban Microclimate (2013), Shah Alam: https://doi.org/10.1016/j.sbspro.2013.11.058 . It examines vegetation/land-cover and LST across historical Landsat dates. These studies support the problem and indicator choices; they do not validate this app's causal intervention effects. LST is not air temperature; NDVI is not a biodiversity census. Composite timing, coverage, spatial aggregation and the small 11-zone eligible sample limit generalisation. No interviews or user-validation results are claimed.
+
+The compact proposed pilot plan in Impact & Evidence covers partner/boundary selection, ownership/access/site verification, professional assessment and quotations, one or two approved interventions, monitoring and repeatability. Required participants and proposed indicators are listed, with no approved partner or measured outcome implied. Location labels remain separate user declarations; source-verified labels require a reference and never prove ownership.
+
+### Five-minute judge demonstration
+
+1. Open the default Malaysian 2026 case. Show 20 polygons, 11 valid and 9 grey; inspect dates and relative temperature legend.
+2. Start the Guided Demo explicitly. Explain the three hypothetical site assessments, not inferred existing facilities.
+3. Open Recommendations & Budget: at RM150,000 the base plan is trees + carports, RM140,040, with 32 kWp / 35,360 kWh/year. Change objective weights or budget, then restore equal weights / RM150,000.
+4. Show cost sensitivity: +10/+20% selects trees + cool roofs, without solar. Compare original/future optimised scenarios and roof-conflict validation.
+5. Open Impact & Evidence. Apply the Peninsular preset, explicitly enter 100% displacement and a hypothetical arrangement note: 26.17 tCO2e/year; sensitivity rows show zero. Leave financial inputs blank to demonstrate Not estimated, then optionally enter clearly hypothetical values. Inspect unverified outcomes, pilot checklist and export JSON.
+
+### Current validation
+
+78 automated test groups pass, including selected-only carbon, incomplete assumptions, region/missing-factor handling, zero-PV sensitivity, financial completeness/positive-net payback, location evidence and original GeoJSON preservation. TypeScript and production build are required for every delivery; BUILD-MANIFEST.json is regenerated and all source/dist hashes verified. See FINAL-SCORING-REPORT.md for actual browser verification and limitations. See SECURITY-SUBMISSION.md for clean source and deployment actions; ATTRIBUTIONS.md for licensing status.
+

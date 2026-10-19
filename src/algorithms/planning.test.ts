@@ -1,3 +1,4 @@
+import {portfolioImpact,financialScenario,EMPTY_GRID,EMPTY_FINANCE,PENINSULAR_2024,studyLabel} from './impact.ts';
 import {bindPilotChecks,currentPilotChecks,clearPilotZones} from './readiness.ts';
 import { ndviColor,ndviStops,landCategory,landPalette,overlayVisible,hotspotColors,stageColors } from '../data/layerColors.ts';
 import { exampleAssessments,costSensitivity,comparisonScenarios,futureComparison,pilotReadiness,pilotItems,screeningReasons } from './readiness.ts';
@@ -78,7 +79,7 @@ test('export-ready data contain finite scores and nullable missing observations'
 test('actual JSON export includes objectives, original and optimised scenarios', () => {
     const input = { budget: 100000, excluded: [], threshold: 36.5, objectives: energy, scenarios: [scenario, { ...scenario, land: [0, 0, 0, 0, 0] }], solarInputs: { area: 200, density: .16, yield: 1300, factor: .85, cost: 3200 } };
     const result = JSON.parse(JSON.stringify(buildPlanningSummary(input, '2026-10-16T00:00:00Z')));
-    assert.equal(result.schema_version, 4);
+    assert.equal(result.schema_version, 5);
     assert.equal(result.objectives.normalised.energy, 1);
     assert.ok(result.existing_township.cost <= 100000);
     assert.ok(result.future_scenarios[0].budget_constrained.plan.cost <= scenario.budget);
@@ -420,7 +421,39 @@ test('pilot evidence is bound to the assessed proposal and not objective weights
  assert.deepEqual(currentPilotChecks([],stored),{});assert.deepEqual(clearPilotZones(stored,[original.zone]),{});assert.deepEqual(clearPilotZones(stored,['unrelated']),stored);
  assert.equal(stored[original.id].checks[pilotItems[1]].evidence,'QA reference for 100 m²');
 });
+
+test('carbon needs explicit displacement and uses selected PV only',()=>{
+ const pv={...candidate('pv',138240,50),capacity:32,generation:35360};
+ assert.equal(portfolioImpact([pv]).avoided_grid_emissions_tco2e,null);
+ assert.equal(portfolioImpact([pv],PENINSULAR_2024).avoided_grid_emissions_tco2e,null);
+ const g={...PENINSULAR_2024,displacementPercent:100,displacementNote:'Explicit hypothetical all-generation grid displacement'};
+ assert.ok(Math.abs(portfolioImpact([pv],g).avoided_grid_emissions_tco2e!-26.1664)<1e-9);
+ assert.equal(portfolioImpact([candidate('tree',1800,50)],g).avoided_grid_emissions_tco2e,0);
+ assert.equal(portfolioImpact([],EMPTY_GRID).annual_generation_kwh,0);
+ assert.equal(portfolioImpact([pv],{...EMPTY_GRID,region:'Sabah',displacementPercent:100}).avoided_grid_emissions_tco2e,null);
+ for(const patch of [{factor:NaN},{factor:-1},{displacementPercent:101},{displacementPercent:-1},{region:''},{year:''},{source:''},{displacementNote:''}])assert.equal(portfolioImpact([pv],{...g,...patch}).avoided_grid_emissions_tco2e,null);
+ assert.ok(Math.abs(portfolioImpact([pv],{...g,displacementPercent:50}).avoided_grid_emissions_tco2e!-13.0832)<1e-9);
+});
+test('financial screening requires chosen solar and complete explicit inputs',()=>{
+ const pv={...candidate('pv',10000,50),capacity:10,generation:10000},input={price:.5,selfConsumption:80,exportPrice:.1,om:200,installation:10000,source:'Hypothetical test arrangement, not tariff'};
+ assert.equal(financialScenario(pv,EMPTY_FINANCE).annual_value_rm,null);assert.equal(financialScenario(undefined,input).annual_value_rm,null);assert.equal(financialScenario(candidate('tree',100,10),input).annual_value_rm,null);
+ const f=financialScenario(pv,input);assert.equal(f.annual_value_rm,4200);assert.equal(f.annual_net_benefit_rm,4000);assert.equal(f.simple_payback_years,2.5);
+ assert.equal(financialScenario(pv,{...input,exportPrice:null}).annual_value_rm,null);
+ assert.equal(financialScenario(pv,{...input,selfConsumption:100,exportPrice:null}).annual_value_rm,5000);
+ assert.equal(financialScenario(pv,{...input,om:5000}).simple_payback_years,null);
+ for(const patch of [{price:NaN},{selfConsumption:101},{installation:-1},{om:null},{source:''}])assert.equal(financialScenario(pv,{...input,...patch}).annual_value_rm,null);
+});
+test('real guided portfolio carbon sensitivity and export preserve observations',()=>{
+ const text=readFileSync(new URL('../assets/case-studies/CoolTown_Real_Zones_2026.geojson',import.meta.url),'utf8'),loaded=loadCaseStudy(text).dataset!;assert.ok(loaded);
+ const before=JSON.stringify(loaded.originalGeoJSON),g={...PENINSULAR_2024,displacementPercent:100,displacementNote:'Hypothetical demonstration only'},assessments=exampleAssessments(loaded.zones,80);
+ const r=buildPlanningSummary({dataset:loaded,budget:150000,excluded:[],threshold:relativeHotspotThreshold(loaded.zones,80)!,minimumCoverage:80,objectives:DEFAULT_OBJECTIVES,scenarios:[scenario],solarInputs:{area:10000,density:.16,yield:1300,factor:.85,cost:3200},siteAssessments:assessments,grid:g});
+ assert.equal(r.existing_township.cost,140040);assert.equal(r.estimated_solar_carbon_impact.capacity_kwp,32);assert.equal(r.estimated_solar_carbon_impact.annual_generation_kwh,35360);assert.equal(r.cost_sensitivity[1].estimated_solar_carbon_impact.annual_generation_kwh,0);assert.equal(r.cost_sensitivity[1].estimated_solar_carbon_impact.avoided_grid_emissions_tco2e,0);assert.equal(r.cost_sensitivity[2].estimated_solar_carbon_impact.avoided_grid_emissions_tco2e,0);
+ assert.equal(r.unverified_outcomes.co2_reduction,null);assert.equal(JSON.stringify(r.original_geojson),before);assert.equal(loaded.zones.length,20);assert.equal(loaded.zones.filter(z=>environmentalQuality(z,80).usable).length,11);
+});
+test('study location reference never establishes land ownership',()=>{assert.equal(studyLabel({label:'Test',status:'source-verified',reference:''}).status,'approximate');assert.equal(studyLabel({label:'',status:'source-verified',reference:'Reference'}).status,'unavailable');});
+
 console.log(`${passed} test groups passed.`);
+
 
 
 

@@ -116,3 +116,7 @@ GIS overlay state is now derived from the selected layer. Shared colour/legend f
 ## Final QA fixes
 
 Two reproduced bugs fixed: stale pilot evidence on revised site proposals, and satellite-only/basemap mismatch after navigating away and back. No new dependencies or major features. Explicitly label proposed hypothetical facilities. Reuse the sensitivity base optimiser result. 74 test groups pass; see FINAL-QA-REPORT.md.
+
+## Final scoring and impact upgrade
+
+Added impact.ts and ImpactPanel.tsx; integrated dataset-isolated grid, financial and location assumptions into main.tsx and schema-5 summary.ts. Added four test groups (78 total). Hardened ignore rules; added safe env.example, source submission/security instructions and attributions. Original observations and optimisation rules are unchanged. Current results supersede historical counts above; see FINAL-SCORING-REPORT.md.
