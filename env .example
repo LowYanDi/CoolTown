@@ -1,3 +1,0 @@
-# Public browser key: restrict allowed origins and usage in MapTiler.
-# Copy to .env.local and replace placeholder; leave empty for street fallback.
-VITE_MAPTILER_KEY=

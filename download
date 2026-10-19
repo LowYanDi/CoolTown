@@ -1,17 +1,21 @@
+# Dependencies and generated builds
 node_modules/
 dist/
+
+# Local environment and browser API credentials
 .env
 .env.*
 !.env.example
 env.download
-*.zip
+env .example
+
+# Logs, archives, OS/editor artifacts
 *.log
-.npm-cache/
-.sites-runtime/
-.openai/
-.vscode/
-.idea/
+*.zip
+*.tar.gz
 .DS_Store
 Thumbs.db
-*.tmp
-*.swp
+.vscode/
+.idea/
+coverage/
+.tmp/
