@@ -1,3 +1,4 @@
+import {carbonWarnings,financialWarnings,referenceReview,safeReferenceURL,hypotheticalCarbonDemo} from './assumptionWarnings.ts';
 import {portfolioImpact,financialScenario,EMPTY_GRID,EMPTY_FINANCE,PENINSULAR_2024,studyLabel} from './impact.ts';
 import {bindPilotChecks,currentPilotChecks,clearPilotZones} from './readiness.ts';
 import { ndviColor,ndviStops,landCategory,landPalette,overlayVisible,hotspotColors,stageColors } from '../data/layerColors.ts';
@@ -452,6 +453,25 @@ test('real guided portfolio carbon sensitivity and export preserve observations'
 });
 test('study location reference never establishes land ownership',()=>{assert.equal(studyLabel({label:'Test',status:'source-verified',reference:''}).status,'approximate');assert.equal(studyLabel({label:'',status:'source-verified',reference:'Reference'}).status,'unavailable');});
 
+
+test('advisory warnings preserve high legitimate values and calculations',()=>{
+ const g={...hypotheticalCarbonDemo(),factor:2.5},pv={...candidate('pv',10000,50),capacity:10,generation:10000},before=JSON.stringify(g),result=portfolioImpact([pv],g);
+ assert.ok(carbonWarnings(g).some(w=>w.includes('Unusually high')));assert.equal(JSON.stringify(g),before);assert.deepEqual(portfolioImpact([pv],g),result);assert.equal(result.avoided_grid_emissions_tco2e,25);
+ const f={price:5,selfConsumption:100,exportPrice:6,om:3000,installation:1000,source:'Hypothetical test'},snapshot=JSON.stringify(f),calc=financialScenario(pv,f);
+ assert.ok(financialWarnings(f,pv,calc.simple_payback_years).length>=5);assert.equal(JSON.stringify(f),snapshot);assert.deepEqual(financialScenario(pv,f),calc);
+});
+test('reference reviews never authenticate URLs and reject unsafe links',()=>{
+ assert.match(referenceReview('')[0],/missing/);assert.match(referenceReview('Hypothetical demo tariff')[0],/not a verified/);assert.match(referenceReview('https://example.com/tariff')[0],/not been independently verified/);
+ assert.equal(safeReferenceURL('javascript:alert(1)'),null);assert.equal(safeReferenceURL('data:text/html,test'),null);assert.equal(safeReferenceURL('https://user:password@example.com'),null);assert.equal(safeReferenceURL('https://example.com/reference'),'https://example.com/reference');assert.equal(safeReferenceURL('Provider report 2026, document REF-22'),null);
+});
+test('carbon demo is opt-in and does not change defaults or factor-only preset',()=>{
+ const baseline=JSON.stringify({EMPTY_GRID,PENINSULAR_2024}),demo=hypotheticalCarbonDemo();assert.equal(demo.factor,.740);assert.equal(demo.displacementPercent,100);assert.match(demo.displacementNote,/HYPOTHETICAL/);demo.factor=7;
+ assert.equal(hypotheticalCarbonDemo().factor,.740);assert.equal(JSON.stringify({EMPTY_GRID,PENINSULAR_2024}),baseline);assert.equal(EMPTY_GRID.displacementPercent,null);assert.equal(PENINSULAR_2024.displacementPercent,null);
+});
+test('export retains references and advisory review separately from actual outcomes',()=>{
+ const g=hypotheticalCarbonDemo(),r=buildPlanningSummary({budget:0,excluded:[],threshold:36.5,objectives:DEFAULT_OBJECTIVES,scenarios:[scenario],solarInputs:{area:200,density:.16,yield:1300,factor:.85,cost:3200},grid:g,financialCandidateId:'not-selected',financialInputs:{'not-selected':{...EMPTY_FINANCE,source:'Hypothetical finance reference'}}});
+ assert.equal(r.source_references.carbon,g.source);assert.equal(r.source_references.financial,'Hypothetical finance reference');assert.equal(r.source_references.environmental.length,zones.length);assert.equal(r.source_references.environmental[0].source,zones[0].data_source);assert.equal(r.financial_scenario.annual_value_rm,null);assert.equal(r.unverified_outcomes.co2_reduction,null);assert.match(r.assumption_review.policy,/never change/);
+});
 console.log(`${passed} test groups passed.`);
 
 

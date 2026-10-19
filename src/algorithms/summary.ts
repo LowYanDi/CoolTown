@@ -1,3 +1,4 @@
+import {carbonWarnings,financialWarnings,PLAUSIBILITY_POLICY,DEMO_CLARITY} from './assumptionWarnings.ts';
 import { portfolioImpact,financialScenario,studyLabel,EMPTY_STUDY,type GridAssumptions,type FinancialInputs,type StudyLabel } from './impact.ts';
 import { costSensitivity,futureComparison,pilotReadiness,type PilotChecks,type ComparisonSettings } from './readiness.ts';
 import { relativeHotspotThreshold } from '../data/caseStudyModel.ts';
@@ -27,6 +28,8 @@ export function buildPlanningSummary(input: SummaryInput, exportedAt = new Date(
     const plan = planningResult(candidates, input.budget, input.excluded);
     return {
         schema_version: 5,
+        assumption_review:{policy:PLAUSIBILITY_POLICY,notice:DEMO_CLARITY,carbon:carbonWarnings(input.grid),financial:input.financialCandidateId?financialWarnings(input.financialInputs?.[input.financialCandidateId],plan.selected.find(c=>c.id===input.financialCandidateId),financialScenario(plan.selected.find(c=>c.id===input.financialCandidateId),input.financialInputs?.[input.financialCandidateId]).simple_payback_years):[]},
+        source_references:{environmental:zones.map(z=>({zone_id:z.zone_id,source:z.data_source,observation_date:z.observation_date,observation_start:z.observation_start??null,observation_end:z.observation_end??null,landcover_source:z.landcover_source??null})),carbon:input.grid?.source??'',financial:input.financialInputs?.[input.financialCandidateId??'']?.source??'',notice:'References are user-declared and not independently authenticated.'},
         estimated_solar_carbon_impact:portfolioImpact(plan.selected,input.grid),
         financial_scenario:financialScenario(plan.selected.find(c=>c.id===input.financialCandidateId),input.financialInputs?.[input.financialCandidateId??'']),
         study_location:studyLabel(input.study??EMPTY_STUDY),
